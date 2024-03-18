@@ -2,9 +2,11 @@ package aiclient
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -29,4 +31,29 @@ func MustCheckConnection(client *openai.Client) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// Ensure we have the right env variables set for the given source
+func MustLoadAPIKey(openai bool, anyscale bool) error {
+	// Load the .env file if we don't have the env var set
+	loadEnvVar := func(varName string) error {
+		if os.Getenv(varName) == "" {
+			err := godotenv.Load()
+			if err != nil || os.Getenv(varName) == "" {
+				return fmt.Errorf("Failed to load %s", varName)
+			}
+		}
+		return nil
+	}
+	if openai {
+		if err := loadEnvVar("OPENAI_API_KEY"); err != nil {
+			return err
+		}
+	}
+	if anyscale {
+		if err := loadEnvVar("ANYSCALE_ENDPOINT_TOKEN"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
