@@ -12,6 +12,7 @@ const (
 	CodeLlama34b        AnyscaleModel = "codellama/CodeLlama-34b-Instruct-hf"
 	CodeLlama70b        AnyscaleModel = "codellama/CodeLlama-70b-Instruct-hf"
 	GPT35Turbo          OpenAIModel   = "gpt-3.5-turbo"
+	GPT4TurboPreview    OpenAIModel   = "gpt-4-turbo-preview"
 )
 
 func (a AnyscaleModel) String() string {
@@ -45,8 +46,10 @@ func IsAnyscaleModel(name string) (AnyscaleModel, bool) {
 
 func IsOpenAIModel(name string) (OpenAIModel, bool) {
 	switch name {
-	case GPT35Turbo.String(), "turbo":
+	case GPT35Turbo.String(), "turbo35":
 		return GPT35Turbo, true
+	case GPT4TurboPreview.String(), "turbo":
+		return GPT4TurboPreview, true
 	default:
 		return "", false
 	}
