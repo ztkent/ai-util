@@ -11,12 +11,17 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/sashabaranov/go-openai"
+	"github.com/sirupsen/logrus"
 )
 
 // Determine if the user's input contains a resource command
 // If so, manage the resource and add the result to the conversation
 // There is a LIMIT to the number of tokens, sometimes the resource is too large
 func (conv *Conversation) ManageRAG(userInput string) string {
+	if len(userInput) == 0 {
+		return ""
+	}
+
 	var resourceCommands = []string{"url", "file"}
 	resourcesFound := []string{}
 	for _, cmd := range resourceCommands {
@@ -32,8 +37,10 @@ func (conv *Conversation) ManageRAG(userInput string) string {
 		}
 	}
 	if len(resourcesFound) > 0 {
-		fmt.Println("Resources found: " + strings.Join(resourcesFound, ", "))
-		fmt.Println("User input: " + userInput)
+		logger.WithFields(logrus.Fields{
+			"resources": resourcesFound,
+			"input":     userInput,
+		}).Debug("Resources added to user input")
 	}
 	return userInput
 }
@@ -65,7 +72,10 @@ func GenerateURLMessage(path string) (openai.ChatCompletionMessage, error) {
 
 	messageParts := make([]openai.ChatMessagePart, 0)
 	if url.Scheme != "" && url.Host != "" {
-		fmt.Println("Downloading file from URL: " + path)
+		logger.WithFields(logrus.Fields{
+			"url": path,
+		}).Debug("Downloading URL")
+
 		resp, err := http.Get(path)
 		if err != nil {
 			return openai.ChatCompletionMessage{}, err
@@ -101,6 +111,7 @@ func GenerateURLMessage(path string) (openai.ChatCompletionMessage, error) {
 	} else {
 		return openai.ChatCompletionMessage{}, fmt.Errorf("Invalid URL: " + path)
 	}
+
 	return openai.ChatCompletionMessage{
 		Name:         "URL",
 		Role:         openai.ChatMessageRoleSystem,
@@ -111,7 +122,9 @@ func GenerateURLMessage(path string) (openai.ChatCompletionMessage, error) {
 func GenerateFileMessage(path string) (openai.ChatCompletionMessage, error) {
 	resContent := ""
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		fmt.Println("Uploading file from path: " + path)
+		logger.WithFields(logrus.Fields{
+			"path": path,
+		}).Debug("Reading file from path")
 
 		file, err := os.Open(path)
 		if err != nil {
