@@ -13,6 +13,7 @@ type Conversation struct {
 	maxMessages int
 	maxTokens   int
 	tokenCount  int
+	ragEnabled  bool
 	lock        *sync.Mutex
 	id          uuid.UUID
 }
@@ -25,7 +26,7 @@ const (
 // Start a new conversation with the system prompt
 // A system prompt defines the initial context of the conversation
 // This includes the persona of the bot and any information that you want to provide to the model.
-func NewConversation(systemPrompt string, maxMessages int, maxTokens int) *Conversation {
+func NewConversation(systemPrompt string, maxMessages int, maxTokens int, ragEnabled bool) *Conversation {
 	if maxMessages == 0 {
 		maxMessages = MAX_CONVERSATION_LENGTH
 	}
@@ -41,6 +42,7 @@ func NewConversation(systemPrompt string, maxMessages int, maxTokens int) *Conve
 		},
 		maxMessages: maxMessages,
 		maxTokens:   maxTokens,
+		ragEnabled:  ragEnabled,
 		lock:        &sync.Mutex{},
 		id:          uuid.New(),
 	}
