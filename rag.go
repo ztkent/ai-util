@@ -1,4 +1,4 @@
-package aiclient
+package aiutil
 
 import (
 	"encoding/json"

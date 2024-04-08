@@ -1,4 +1,4 @@
-package aiclient
+package aiutil
 
 type AnyscaleModel string
 type OpenAIModel string

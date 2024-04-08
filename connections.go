@@ -1,4 +1,4 @@
-package aiclient
+package aiutil
 
 import (
 	"context"
@@ -11,9 +11,9 @@ import (
 )
 
 func MustConnectOpenAI(model OpenAIModel, temperature float32) *Client {
-	oaiClient := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
-	MustCheckConnection(oaiClient)
-	return &Client{Client: oaiClient, Model: model.String(), Temperature: temperature}
+	oaiutil := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
+	MustCheckConnection(oaiutil)
+	return &Client{Client: oaiutil, Model: model.String(), Temperature: temperature}
 }
 
 func MustConnectAnyscale(model AnyscaleModel, temperature float32) *Client {

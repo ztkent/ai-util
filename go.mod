@@ -1,4 +1,4 @@
-module github.com/Ztkent/go-openai-extended
+module github.com/Ztkent/ai-util
 
 go 1.22.0
 
