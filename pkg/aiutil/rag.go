@@ -31,7 +31,15 @@ func (conv *Conversation) ManageRAG(userInput string) string {
 			if len(match) > 1 {
 				resource := strings.TrimSpace(match[1])
 				resourcesFound = append(resourcesFound, cmd+":"+resource)
-				conv.GenerateResource(resource, cmd)
+				err := conv.GenerateResource(resource, cmd)
+				if err != nil {
+					logger.WithFields(logrus.Fields{
+						"resource": resource,
+						"error":    err,
+					}).Error("Failed to generate resource")
+					return userInput
+				}
+
 				userInput = strings.Replace(userInput, "-"+cmd+":"+resource, "", -1)
 			}
 		}
