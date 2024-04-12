@@ -4,9 +4,8 @@
 - Services:
     - [OpenAI](https://platform.openai.com/docs/overview)
     - [Anyscale](https://docs.endpoints.anyscale.com/)
-- Conversation controls
-- Token & Message management
-- Access available models
+- Conversation Controls
+- Token Management + Limits
 - Simple RAG
 
 ## Installation

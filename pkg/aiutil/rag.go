@@ -11,17 +11,18 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/sashabaranov/go-openai"
-	"github.com/sirupsen/logrus"
 )
 
 // Determine if the user's input contains a resource command
-// If so, manage the resource and add the result to the conversation
-// There is a LIMIT to the number of tokens, sometimes the resource is too large
-func (conv *Conversation) ManageRAG(userInput string) string {
-	if len(userInput) == 0 {
-		return ""
+// There is usually some limit to the number of tokens
+func ManageRAG(conv *Conversation, userInput string) (string, []string, error) {
+	if conv == nil {
+		return userInput, []string{}, fmt.Errorf("Failed to ManageRAG: Conversation is nil")
+	} else if len(userInput) == 0 {
+		return userInput, []string{}, nil
 	}
 
+	// Only supporting URL and File resources for now
 	var resourceCommands = []string{"url", "file"}
 	resourcesFound := []string{}
 	for _, cmd := range resourceCommands {
@@ -31,45 +32,38 @@ func (conv *Conversation) ManageRAG(userInput string) string {
 			if len(match) > 1 {
 				resource := strings.TrimSpace(match[1])
 				resourcesFound = append(resourcesFound, cmd+":"+resource)
-				err := conv.GenerateResource(resource, cmd)
+				contextMsg, err := GenerateResource(resource, cmd)
 				if err != nil {
-					logger.WithFields(logrus.Fields{
-						"resource": resource,
-						"error":    err,
-					}).Error("Failed to generate resource")
-					return userInput
+					return userInput, resourcesFound, err
 				}
-
+				err = conv.Append(contextMsg)
+				if err != nil {
+					return userInput, resourcesFound, fmt.Errorf("Failed to append resource to conversation: " + err.Error())
+				}
 				userInput = strings.Replace(userInput, "-"+cmd+":"+resource, "", -1)
 			}
 		}
 	}
-	if len(resourcesFound) > 0 {
-		logger.WithFields(logrus.Fields{
-			"resources": resourcesFound,
-			"input":     userInput,
-		}).Debug("Resources added to user input")
-	}
-	return userInput
+	return userInput, resourcesFound, nil
 }
 
-func (conv *Conversation) GenerateResource(path string, pathType string) error {
+// Generate a resource message based on the path and type, return the message to append to the conversation
+func GenerateResource(path string, pathType string) (openai.ChatCompletionMessage, error) {
 	if pathType == "url" {
 		msg, err := GenerateURLMessage(path)
 		if err != nil {
-			return err
+			return openai.ChatCompletionMessage{}, err
 		}
-		conv.Append(msg)
+		return msg, nil
 	} else if pathType == "file" {
 		msg, err := GenerateFileMessage(path)
 		if err != nil {
-			return err
+			return openai.ChatCompletionMessage{}, err
 		}
-		conv.Append(msg)
+		return msg, nil
 	} else {
-		return fmt.Errorf("Invalid resource type: " + pathType)
+		return openai.ChatCompletionMessage{}, fmt.Errorf("Invalid resource type: " + pathType)
 	}
-	return nil
 }
 
 func GenerateURLMessage(path string) (openai.ChatCompletionMessage, error) {
@@ -80,20 +74,16 @@ func GenerateURLMessage(path string) (openai.ChatCompletionMessage, error) {
 
 	messageParts := make([]openai.ChatMessagePart, 0)
 	if url.Scheme != "" && url.Host != "" {
-		logger.WithFields(logrus.Fields{
-			"url": path,
-		}).Debug("Downloading URL")
-
 		resp, err := http.Get(path)
 		if err != nil {
-			return openai.ChatCompletionMessage{}, err
+			return openai.ChatCompletionMessage{}, fmt.Errorf("Failed to fetch URL: " + path)
 		}
 		defer resp.Body.Close()
 
 		// Handle the page content
 		doc, err := goquery.NewDocumentFromReader(resp.Body)
 		if err != nil {
-			return openai.ChatCompletionMessage{}, err
+			return openai.ChatCompletionMessage{}, fmt.Errorf("Failed to parse HTML: " + path)
 		}
 		var pageContent []string
 		seen := make(map[string]struct{})
@@ -130,10 +120,6 @@ func GenerateURLMessage(path string) (openai.ChatCompletionMessage, error) {
 func GenerateFileMessage(path string) (openai.ChatCompletionMessage, error) {
 	resContent := ""
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		logger.WithFields(logrus.Fields{
-			"path": path,
-		}).Debug("Reading file from path")
-
 		file, err := os.Open(path)
 		if err != nil {
 			return openai.ChatCompletionMessage{}, err

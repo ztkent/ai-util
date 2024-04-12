@@ -2,32 +2,10 @@ package aiutil
 
 import (
 	"context"
-	"os"
-	"strings"
+	"fmt"
 
 	"github.com/sashabaranov/go-openai"
-	"github.com/sirupsen/logrus"
 )
-
-var logger = logrus.New()
-
-func init() {
-	// Setup the logger, so it can be parsed by datadog
-	logger.Formatter = &logrus.JSONFormatter{}
-	logger.SetOutput(os.Stdout)
-	// Set the log level
-	logLevel := strings.ToLower(os.Getenv("LOG_LEVEL"))
-	switch logLevel {
-	case "debug":
-		logger.SetLevel(logrus.DebugLevel)
-	case "info":
-		logger.SetLevel(logrus.InfoLevel)
-	case "error":
-		logger.SetLevel(logrus.ErrorLevel)
-	default:
-		logger.SetLevel(logrus.InfoLevel)
-	}
-}
 
 type Client struct {
 	*openai.Client
@@ -38,6 +16,11 @@ type Client struct {
 // Waits for the entire response to be returned
 // Adds the users request, and the response to the conversation
 func (c *Client) SendCompletionRequest(ctx context.Context, conv *Conversation, userPrompt string) (string, error) {
+	// Ensure we have a conversation to work with
+	if conv == nil {
+		return "", fmt.Errorf("Failed to SendCompletionRequest: Conversation is nil")
+	}
+
 	// Add the latest message to the conversation
 	err := conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
@@ -78,6 +61,12 @@ func (c *Client) SendStreamRequest(ctx context.Context, conv *Conversation, user
 	defer close(responseChan)
 	defer close(errChan)
 
+	// Ensure we have a conversation to work with
+	if conv == nil {
+		errChan <- fmt.Errorf("Failed to SendStreamRequest: Conversation is nil")
+		return
+	}
+
 	// Add the latest message to the conversation
 	err := conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
@@ -93,7 +82,6 @@ func (c *Client) SendStreamRequest(ctx context.Context, conv *Conversation, user
 		Model:       c.Model,
 		Temperature: c.Temperature,
 		Messages:    conv.Messages,
-		MaxTokens:   conv.maxTokens,
 	})
 	if err != nil {
 		errChan <- err
@@ -110,6 +98,7 @@ func (c *Client) SendStreamRequest(ctx context.Context, conv *Conversation, user
 			responseChat += token.Delta.Content
 		}
 	}
+
 	// Add the response to the conversation, once the stream is closed
 	err = conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
