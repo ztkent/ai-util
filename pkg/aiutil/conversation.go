@@ -58,7 +58,7 @@ func (c *Conversation) Append(m openai.ChatCompletionMessage) error {
 	}
 	attemptedTokens := c.TokenCount + tokCount
 	if attemptedTokens > c.MaxTokens {
-		return fmt.Errorf("Max tokens exceeded")
+		return fmt.Errorf("Max tokens exceeded [ %d > %d ]", attemptedTokens, c.MaxTokens)
 	}
 	c.TokenCount += tokCount
 	c.Messages = append(c.Messages, m)
