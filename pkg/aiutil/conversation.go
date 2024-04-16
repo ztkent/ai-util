@@ -78,3 +78,22 @@ func (c *Conversation) SeedConversation(requestResponseMap map[string]string) {
 		})
 	}
 }
+
+// Add a reference to the conversation
+func (c *Conversation) AddReference(id string, content string) error {
+	// Build the response message
+	messageParts := make([]openai.ChatMessagePart, 0)
+	messageParts = append(messageParts, openai.ChatMessagePart{
+		Type: openai.ChatMessagePartTypeText,
+		Text: "<Id>" + id + "</Id>",
+	})
+	messageParts = append(messageParts, openai.ChatMessagePart{
+		Type: openai.ChatMessagePartTypeText,
+		Text: "<Content> " + content + " </Content>",
+	})
+	return c.Append(openai.ChatCompletionMessage{
+		Name:         "Reference",
+		Role:         openai.ChatMessageRoleSystem,
+		MultiContent: messageParts,
+	})
+}
