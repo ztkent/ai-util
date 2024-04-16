@@ -1,5 +1,10 @@
 package aiutil
 
+import (
+	"fmt"
+	"strings"
+)
+
 type AnyscaleModel string
 type OpenAIModel string
 
@@ -25,7 +30,7 @@ func (o OpenAIModel) String() string {
 }
 
 func IsAnyscaleModel(name string) (AnyscaleModel, bool) {
-	switch name {
+	switch strings.ToLower(name) {
 	case Mistral7BInstruct.String(), "m7b":
 		return Mistral7BInstruct, true
 	case Llama27bChat.String(), "l7b":
@@ -46,7 +51,7 @@ func IsAnyscaleModel(name string) (AnyscaleModel, bool) {
 }
 
 func IsOpenAIModel(name string) (OpenAIModel, bool) {
-	switch name {
+	switch strings.ToLower(name) {
 	case GPT35Turbo.String(), "turbo35":
 		return GPT35Turbo, true
 	case GPT4TurboPreview.String(), "turbopreview":
@@ -56,4 +61,13 @@ func IsOpenAIModel(name string) (OpenAIModel, bool) {
 	default:
 		return "", false
 	}
+}
+
+func GetModelProvider(name string) (string, error) {
+	if _, ok := IsAnyscaleModel(name); ok {
+		return "anyscale", nil
+	} else if _, ok := IsOpenAIModel(name); ok {
+		return "openai", nil
+	}
+	return "", fmt.Errorf("Invalid model name: %s", name)
 }
