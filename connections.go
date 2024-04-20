@@ -36,7 +36,6 @@ func NewAIClient(aiProvider string, model string, temperature float64) (Client, 
 		if err != nil {
 			return nil, fmt.Errorf("Failed to load OpenAI API key: %s", err)
 		}
-		// Set default model if none is provided
 		if model == "" {
 			model = DefaultOpenAIModel
 		}
@@ -50,7 +49,6 @@ func NewAIClient(aiProvider string, model string, temperature float64) (Client, 
 		if err != nil {
 			return nil, fmt.Errorf("Failed to load Anyscale API key: %s", err)
 		}
-		// Set default model if none is provided
 		if model == "" {
 			model = DefaultAnyscaleModel
 		}
@@ -64,7 +62,6 @@ func NewAIClient(aiProvider string, model string, temperature float64) (Client, 
 		if err != nil {
 			return nil, fmt.Errorf("Failed to load Replicate API key: %s", err)
 		}
-		// Set default model if none is provided
 		if model == "" {
 			model = DefaultReplicateModel
 		}
@@ -116,7 +113,7 @@ func MustCheckConnection(client Client) {
 
 // Ensure we have the right env variables set for the given source
 func MustLoadAPIKey(provider Provider) error {
-	// Load the .env file if we don't have the env var set
+	// Load the .env file if the var isnt already set
 	loadEnvVar := func(varName string) error {
 		if os.Getenv(varName) == "" {
 			err := godotenv.Load()
