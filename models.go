@@ -63,11 +63,11 @@ func IsOpenAIModel(name string) (OpenAIModel, bool) {
 	}
 }
 
-func GetModelProvider(name string) (string, error) {
+func GetModelProvider(name string) (Provider, error) {
 	if _, ok := IsAnyscaleModel(name); ok {
-		return "anyscale", nil
+		return Anyscale, nil
 	} else if _, ok := IsOpenAIModel(name); ok {
-		return "openai", nil
+		return OpenAI, nil
 	}
 	return "", fmt.Errorf("Invalid model name: %s", name)
 }

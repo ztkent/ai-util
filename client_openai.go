@@ -7,7 +7,7 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-type Client struct {
+type OAIClient struct {
 	*openai.Client
 	Model       string
 	Temperature float32
@@ -15,7 +15,7 @@ type Client struct {
 
 // Waits for the entire response to be returned
 // Adds the users request, and the response to the conversation
-func (c *Client) SendCompletionRequest(ctx context.Context, conv *Conversation, userPrompt string) (string, error) {
+func (c *OAIClient) SendCompletionRequest(ctx context.Context, conv *Conversation, userPrompt string) (string, error) {
 	// Ensure we have a conversation to work with
 	if conv == nil {
 		return "", fmt.Errorf("Failed to SendCompletionRequest: Conversation is nil")
@@ -57,7 +57,7 @@ func (c *Client) SendCompletionRequest(ctx context.Context, conv *Conversation, 
 
 // Stream the response as it comes in
 // Adds the users request, and the response to the conversation
-func (c *Client) SendStreamRequest(ctx context.Context, conv *Conversation, userPrompt string, responseChan chan string, errChan chan error) {
+func (c *OAIClient) SendStreamRequest(ctx context.Context, conv *Conversation, userPrompt string, responseChan chan string, errChan chan error) {
 	defer close(responseChan)
 	defer close(errChan)
 
@@ -111,10 +111,18 @@ func (c *Client) SendStreamRequest(ctx context.Context, conv *Conversation, user
 	return
 }
 
-func (c *Client) SetTemperature(temp float32) {
+func (c *OAIClient) SetTemperature(temp float32) {
 	c.Temperature = temp
 }
 
-func (c *Client) SetModel(model string) {
+func (c *OAIClient) SetModel(model string) {
 	c.Model = model
+}
+
+func (c *OAIClient) SetWebhook(url string, events []string) error {
+	return fmt.Errorf("Webhooks are not supported for OpenAI")
+}
+
+func (c *OAIClient) ListModels(ctx context.Context) ([]string, error) {
+	return c.ListModels(ctx)
 }
