@@ -21,6 +21,20 @@ const (
 )
 
 func NewAIClient(aiProvider string, model string, temperature float64) (Client, error) {
+	// Define a map of default models for each provider
+	defaultModels := map[string]string{
+		"openai":    DefaultOpenAIModel,
+		"anyscale":  DefaultAnyscaleModel,
+		"replicate": DefaultReplicateModel,
+	}
+
+	// Define a map of connection functions for each provider
+	connectFuncs := map[string]func(string, float32) (Client, error){
+		"openai":    ConnectOpenAI,
+		"anyscale":  ConnectAnyscale,
+		"replicate": ConnectReplicate,
+	}
+
 	// Check if we need to switch the provider
 	_, isAnyscaleModel := IsAnyscaleModel(model)
 	_, isReplicateModel := IsReplicateModel(model)
@@ -30,89 +44,62 @@ func NewAIClient(aiProvider string, model string, temperature float64) (Client, 
 		aiProvider = "replicate"
 	}
 
-	var client Client
-	if aiProvider == "openai" {
-		err := MustLoadAPIKey(OpenAI)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to load OpenAI API key: %s", err)
-		}
-		if model == "" {
-			model = DefaultOpenAIModel
-		}
-		if model, ok := IsOpenAIModel(model); ok {
-			client = MustConnectOpenAI(model, float32(temperature))
-		} else {
-			return nil, fmt.Errorf("Invalid OpenAI model: %s provided", model)
-		}
-	} else if aiProvider == "anyscale" {
-		err := MustLoadAPIKey(Anyscale)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to load Anyscale API key: %s", err)
-		}
-		if model == "" {
-			model = DefaultAnyscaleModel
-		}
-		if model, ok := IsAnyscaleModel(model); ok {
-			client = MustConnectAnyscale(model, float32(temperature))
-		} else {
-			return nil, fmt.Errorf("Invalid Anyscale model: %s provided", model)
-		}
-	} else if aiProvider == "replicate" {
-		err := MustLoadAPIKey(Replicate)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to load Replicate API key: %s", err)
-		}
-		if model == "" {
-			model = DefaultReplicateModel
-		}
-		if model, ok := IsReplicateModel(model); ok {
-			client = MustConnectReplicate(model, float32(temperature))
-		} else {
-			return nil, fmt.Errorf("Invalid Replicate model: %s provided", model)
-		}
-	} else {
-		return nil, fmt.Errorf("Invalid AI provider: %s provided, select either anyscale or openai", aiProvider)
+	// Check if the provider is valid
+	connectFunc, ok := connectFuncs[aiProvider]
+	if !ok {
+		return nil, fmt.Errorf("Invalid AI provider: %s provided, select either anyscale, openai, or replicate", aiProvider)
 	}
-	return client, nil
+
+	// Load the API key for the provider
+	err := LoadAPIKey(Provider(aiProvider))
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load %s API key: %s", aiProvider, err)
+	}
+
+	// Use the default model if none is provided
+	if model == "" {
+		model = defaultModels[aiProvider]
+	}
+
+	// Connect to the AI provider
+	return connectFunc(model, float32(temperature))
 }
 
-func MustConnectOpenAI(model OpenAIModel, temperature float32) Client {
+func ConnectOpenAI(model string, temperature float32) (Client, error) {
 	oaiutil := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
-	client := &OAIClient{Client: oaiutil, Model: model.String(), Temperature: temperature}
-	MustCheckConnection(client)
-	return client
+	client := &OAIClient{Client: oaiutil, Model: model, Temperature: temperature}
+	return client, CheckConnection(client)
 }
 
-func MustConnectAnyscale(model AnyscaleModel, temperature float32) Client {
+func ConnectAnyscale(model string, temperature float32) (Client, error) {
 	config := openai.DefaultConfig(os.Getenv("ANYSCALE_ENDPOINT_TOKEN"))
 	config.BaseURL = "https://api.endpoints.anyscale.com/v1"
 	asClient := openai.NewClientWithConfig(config)
-	client := &OAIClient{Client: asClient, Model: model.String(), Temperature: temperature}
-	MustCheckConnection(client)
-	return client
+	client := &OAIClient{Client: asClient, Model: model, Temperature: temperature}
+	return client, CheckConnection(client)
 }
 
-func MustConnectReplicate(model ReplicateModel, temperature float32) Client {
+func ConnectReplicate(model string, temperature float32) (Client, error) {
 	r8, err := replicate.NewClient(replicate.WithTokenFromEnv()) // REPLICATE_API_TOKEN
 	if err != nil {
-		panic(fmt.Errorf("Failed to create Replicate client: %v", err))
+		return nil, fmt.Errorf("Failed to create Replicate client: %v", err)
 	}
-	client := &R8Client{Client: r8, Model: model.String(), Temperature: temperature}
-	MustCheckConnection(client)
-	return client
+	client := &R8Client{Client: r8, Model: model, Temperature: temperature}
+	return client, CheckConnection(client)
 }
 
-func MustCheckConnection(client Client) {
+func CheckConnection(client Client) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_, err := client.ListModels(ctx)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 // Ensure we have the right env variables set for the given source
-func MustLoadAPIKey(provider Provider) error {
+func LoadAPIKey(provider Provider) error {
 	// Load the .env file if the var isnt already set
 	loadEnvVar := func(varName string) error {
 		if os.Getenv(varName) == "" {
