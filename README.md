@@ -12,5 +12,3 @@
 ```bash
 go get github.com/ztkent/ai-util
 ```
-
-## Usage
