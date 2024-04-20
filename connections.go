@@ -3,7 +3,6 @@ package aiutil
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -31,7 +30,7 @@ func MustConnectAnyscale(model AnyscaleModel, temperature float32) Client {
 func MustConnectReplicate(model AnyscaleModel, temperature float32) Client {
 	r8, err := replicate.NewClient(replicate.WithTokenFromEnv()) // REPLICATE_API_TOKEN
 	if err != nil {
-		log.Fatalf("Failed to create Replicate client: %v", err)
+		panic(fmt.Errorf("Failed to create Replicate client: %v", err))
 	}
 	client := &R8Client{Client: r8, Model: model.String(), Temperature: temperature}
 	MustCheckConnection(client)
