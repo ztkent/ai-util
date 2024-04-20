@@ -13,9 +13,9 @@ import (
 
 const (
 	DefaultProvider       = "openai"
-	DefaultOpenAIModel    = "turbo35"
-	DefaultAnyscaleModel  = "m8x7b"
-	DefaultReplicateModel = "gpt-3.5-turbo"
+	DefaultOpenAIModel    = "gpt-3.5-turbo"
+	DefaultAnyscaleModel  = "mistralai/Mixtral-8x7B-Instruct-v0.1"
+	DefaultReplicateModel = "meta-llama-3-8b"
 	DefaultTemp           = 0.2
 	DefaultMaxTokens      = 100000
 )
@@ -71,20 +71,24 @@ func ConnectOpenAI(model string, temperature float32) (Client, error) {
 	return client, CheckConnection(client)
 }
 
-func ConnectAnyscale(model string, temperature float32) (Client, error) {
-	config := openai.DefaultConfig(os.Getenv("ANYSCALE_ENDPOINT_TOKEN"))
-	config.BaseURL = "https://api.endpoints.anyscale.com/v1"
-	asClient := openai.NewClientWithConfig(config)
-	client := &OAIClient{Client: asClient, Model: model, Temperature: temperature}
-	return client, CheckConnection(client)
-}
-
 func ConnectReplicate(model string, temperature float32) (Client, error) {
 	r8, err := replicate.NewClient(replicate.WithTokenFromEnv()) // REPLICATE_API_TOKEN
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create Replicate client: %v", err)
 	}
 	client := &R8Client{Client: r8, Model: model, Temperature: temperature}
+	err = client.SetModelWithVersion(context.Background(), model)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to set model: %v", err)
+	}
+	return client, nil
+}
+
+func ConnectAnyscale(model string, temperature float32) (Client, error) {
+	config := openai.DefaultConfig(os.Getenv("ANYSCALE_ENDPOINT_TOKEN"))
+	config.BaseURL = "https://api.endpoints.anyscale.com/v1"
+	asClient := openai.NewClientWithConfig(config)
+	client := &OAIClient{Client: asClient, Model: model, Temperature: temperature}
 	return client, CheckConnection(client)
 }
 
@@ -117,15 +121,15 @@ func LoadAPIKey(provider Provider) error {
 				return err
 			}
 		}
-	case Anyscale:
-		{
-			if err := loadEnvVar("ANYSCALE_ENDPOINT_TOKEN"); err != nil {
-				return err
-			}
-		}
 	case Replicate:
 		{
 			if err := loadEnvVar("REPLICATE_API_TOKEN"); err != nil {
+				return err
+			}
+		}
+	case Anyscale:
+		{
+			if err := loadEnvVar("ANYSCALE_ENDPOINT_TOKEN"); err != nil {
 				return err
 			}
 		}

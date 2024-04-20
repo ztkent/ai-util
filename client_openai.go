@@ -112,7 +112,9 @@ func (c *OAIClient) SendStreamRequest(ctx context.Context, conv *Conversation, u
 }
 
 func (c *OAIClient) SetTemperature(temp float32) {
-	c.Temperature = temp
+	if temp >= 0.0 && temp <= 1.0 {
+		c.Temperature = temp
+	}
 }
 
 func (c *OAIClient) SetModel(model string) {
