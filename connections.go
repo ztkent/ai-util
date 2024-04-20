@@ -11,6 +11,74 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
+const (
+	DefaultProvider       = "openai"
+	DefaultOpenAIModel    = "turbo35"
+	DefaultAnyscaleModel  = "m8x7b"
+	DefaultReplicateModel = "gpt-3.5-turbo"
+	DefaultTemp           = 0.2
+	DefaultMaxTokens      = 100000
+)
+
+func NewAIClient(aiProvider string, model string, temperature float64) (Client, error) {
+	// Check if we need to switch the provider
+	_, isAnyscaleModel := IsAnyscaleModel(model)
+	_, isReplicateModel := IsReplicateModel(model)
+	if isAnyscaleModel {
+		aiProvider = "anyscale"
+	} else if isReplicateModel {
+		aiProvider = "replicate"
+	}
+
+	var client Client
+	if aiProvider == "openai" {
+		err := MustLoadAPIKey(OpenAI)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to load OpenAI API key: %s", err)
+		}
+		// Set default model if none is provided
+		if model == "" {
+			model = DefaultOpenAIModel
+		}
+		if model, ok := IsOpenAIModel(model); ok {
+			client = MustConnectOpenAI(model, float32(temperature))
+		} else {
+			return nil, fmt.Errorf("Invalid OpenAI model: %s provided", model)
+		}
+	} else if aiProvider == "anyscale" {
+		err := MustLoadAPIKey(Anyscale)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to load Anyscale API key: %s", err)
+		}
+		// Set default model if none is provided
+		if model == "" {
+			model = DefaultAnyscaleModel
+		}
+		if model, ok := IsAnyscaleModel(model); ok {
+			client = MustConnectAnyscale(model, float32(temperature))
+		} else {
+			return nil, fmt.Errorf("Invalid Anyscale model: %s provided", model)
+		}
+	} else if aiProvider == "replicate" {
+		err := MustLoadAPIKey(Replicate)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to load Replicate API key: %s", err)
+		}
+		// Set default model if none is provided
+		if model == "" {
+			model = DefaultReplicateModel
+		}
+		if model, ok := IsReplicateModel(model); ok {
+			client = MustConnectReplicate(model, float32(temperature))
+		} else {
+			return nil, fmt.Errorf("Invalid Replicate model: %s provided", model)
+		}
+	} else {
+		return nil, fmt.Errorf("Invalid AI provider: %s provided, select either anyscale or openai", aiProvider)
+	}
+	return client, nil
+}
+
 func MustConnectOpenAI(model OpenAIModel, temperature float32) Client {
 	oaiutil := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
 	client := &OAIClient{Client: oaiutil, Model: model.String(), Temperature: temperature}

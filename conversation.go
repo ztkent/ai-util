@@ -17,16 +17,6 @@ type Conversation struct {
 	*sync.Mutex
 }
 
-const (
-	/*
-		04/12/2024 Pricing:
-		gpt-3.5-turbo-0125			Input: $0.50 / 1M tokens 	Output: $1.50 / 1M tokens
-		gpt-4-turbo-2024-04-09		Input: $10.00 / 1M tokens	Output: $30.00 / 1M tokens
-		Mixtral-8x7B-Instruct-v0.1	Input: 0.50 / 1M tokens 	Output: 0.50 / 1M tokens
-	*/
-	DefaultMaxTokens = 100000 // $0.05, $0.15 | $1.00, $3.00
-)
-
 // Start a new conversation with the system prompt
 // A system prompt defines the initial context of the conversation
 // This includes the persona of the bot and any information that you want to provide to the model.
