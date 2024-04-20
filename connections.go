@@ -27,7 +27,7 @@ func MustConnectAnyscale(model AnyscaleModel, temperature float32) Client {
 	return client
 }
 
-func MustConnectReplicate(model AnyscaleModel, temperature float32) Client {
+func MustConnectReplicate(model ReplicateModel, temperature float32) Client {
 	r8, err := replicate.NewClient(replicate.WithTokenFromEnv()) // REPLICATE_API_TOKEN
 	if err != nil {
 		panic(fmt.Errorf("Failed to create Replicate client: %v", err))

@@ -63,5 +63,13 @@ func (c *R8Client) SetWebhook(url string, events []string) error {
 	return nil
 }
 func (c *R8Client) ListModels(ctx context.Context) ([]string, error) {
-	return c.ListModels(ctx)
+	replicateModelPage, err := c.Client.ListModels(ctx)
+	if err != nil {
+		return nil, err
+	}
+	models := make([]string, 0)
+	for _, model := range replicateModelPage.Results {
+		models = append(models, model.Name)
+	}
+	return models, nil
 }

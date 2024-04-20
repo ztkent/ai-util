@@ -124,5 +124,13 @@ func (c *OAIClient) SetWebhook(url string, events []string) error {
 }
 
 func (c *OAIClient) ListModels(ctx context.Context) ([]string, error) {
-	return c.ListModels(ctx)
+	openAIModels, err := c.Client.ListModels(ctx)
+	if err != nil {
+		return nil, err
+	}
+	models := make([]string, 0)
+	for _, model := range openAIModels.Models {
+		models = append(models, model.ID)
+	}
+	return models, nil
 }
