@@ -13,9 +13,9 @@ import (
 
 const (
 	DefaultProvider       = "openai"
-	DefaultOpenAIModel    = "gpt-3.5-turbo"
-	DefaultAnyscaleModel  = "mistralai/Mixtral-8x7B-Instruct-v0.1"
-	DefaultReplicateModel = "meta-llama-3-8b"
+	DefaultOpenAIModel    = GPT35Turbo
+	DefaultReplicateModel = MetaLlama38b
+	DefaultAnyscaleModel  = Anyscale_Mixtral8x7BInstruct
 	DefaultTemp           = 0.2
 	DefaultMaxTokens      = 100000
 )
@@ -23,9 +23,9 @@ const (
 func NewAIClient(aiProvider string, model string, temperature float64) (Client, error) {
 	// Define a map of default models for each provider
 	defaultModels := map[string]string{
-		"openai":    DefaultOpenAIModel,
-		"anyscale":  DefaultAnyscaleModel,
-		"replicate": DefaultReplicateModel,
+		"openai":    DefaultOpenAIModel.String(),
+		"anyscale":  DefaultAnyscaleModel.String(),
+		"replicate": DefaultReplicateModel.String(),
 	}
 
 	// Define a map of connection functions for each provider

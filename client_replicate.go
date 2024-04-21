@@ -109,12 +109,9 @@ func (c *R8Client) SetModelWithVersion(ctx context.Context, model string) error 
 		return err
 	}
 	for _, currModel := range replicateModelPage.Results {
-		if currModel.Name == model {
-			ver, err := c.GetModelVersion(ctx, currModel.Owner, currModel.Name, currModel.LatestVersion.ID)
-			if err != nil {
-				return err
-			}
-			c.Model = currModel.Owner + "/" + currModel.Name + ":" + ver.ID
+		currModelName := currModel.Owner + "/" + currModel.Name
+		if currModelName == model {
+			c.Model = currModel.Owner + "/" + currModel.Name + ":" + currModel.LatestVersion.ID
 			return nil
 		}
 	}
