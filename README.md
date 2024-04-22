@@ -1,8 +1,8 @@
 # AI Util
-Provides a unified platform to interact with a range of AI services.
+A unified platform to build better apps with AI.  
 
 ## Features 
-- Services:
+- Supported AI Providers:
     - [OpenAI](https://platform.openai.com/docs/overview)
     - [Replicate](https://replicate.com/docs)
     - [Anyscale](https://docs.endpoints.anyscale.com/)
@@ -15,8 +15,14 @@ Provides a unified platform to interact with a range of AI services.
 go get github.com/ztkent/ai-util
 ```
 
-## Usage
-#### Required API Keys
+## Example
+```go
+	client, _ := aiutil.NewAIClient("openai", "gpt-3.5-turbo", 0.5)
+	conversation := aiutil.NewConversation("You are an example assistant.", 100000, true)
+    response, _ := client.SendCompletionRequest(CtxWithTimeout, conversation, "Say hello!")
+```
+
+## Required API Keys
 | Service   | Environment Variable     |
 |-----------|--------------------------|
 | OpenAI    | `OPENAI_API_KEY`         |
@@ -27,9 +33,9 @@ go get github.com/ztkent/ai-util
 ### OpenAI Models
 | Model Name | Model Identifier | Cost (IN/OUT per 1M tokens) |
 |------------|------------------|-----------------------------|
-| GPT-3.5 Turbo | `gpt-3.5-turbo` | - |
-| GPT-4 Turbo Preview | `gpt-4-turbo-preview` | - |
-| GPT-4 Turbo | `gpt-4-turbo` | - |
+| GPT-3.5 Turbo | `gpt-3.5-turbo` | $0.50 / $1.50 |
+| GPT-4 | `gpt-4` | $30.00 / $60.00 |
+| GPT-4 Turbo | `gpt-4-turbo` | $10.00 / $30.00 |
 
 ### Replicate Models
 | Model Name | Model Identifier | Cost (IN/OUT per 1M tokens) |
@@ -37,8 +43,8 @@ go get github.com/ztkent/ai-util
 | Meta Llama 2-70b | `meta/llama-2-70b` | $0.65 / $2.75 |
 | Meta Llama 2-13b | `meta/llama-2-13b` | $0.10 / $0.50 |
 | Meta Llama 2-7b | `meta/llama-2-7b` | $0.05 / $0.25 |
-| Meta Llama 2-70b Chat | `meta/llama-2-70b-chat` | $0.65 / $2.75 |
 | Meta Llama 2-13b Chat | `meta/llama-2-13b-chat` | $0.10 / $0.50 |
+| Meta Llama 2-70b Chat | `meta/llama-2-70b-chat` | $0.65 / $2.75 |
 | Meta Llama 2-7b Chat | `meta/llama-2-7b-chat` | $0.05 / $0.25 |
 | Meta Llama 3-8b | `meta/meta-llama-3-8b` | $0.05 / $0.25 |
 | Meta Llama 3-70b | `meta/meta-llama-3-70b` | $0.65 / $2.75 |
@@ -51,11 +57,10 @@ go get github.com/ztkent/ai-util
 ### Anyscale Models
 | Model Name | Model Identifier | Cost (IN/OUT per 1M tokens) |
 |------------|------------------|-----------------------------|
-| Meta Llama 2-7b Chat | `meta-llama/Llama-2-7b-chat-hf` | - |
-| Meta Llama 2-13b Chat | `meta-llama/Llama-2-13b-chat-hf` | - |
-| Meta Llama 2-70b Chat | `meta-llama/Llama-2-70b-chat-hf` | - |
-| Mistral 7B Instruct | `mistralai/Mistral-7B-Instruct-v0.1` | - |
-| Mixtral 8x7B Instruct | `mistralai/Mixtral-8x7B-Instruct-v0.1` | - |
-| Code Llama 34b | `codellama/CodeLlama-34b-Instruct-hf` | - |
-| Code Llama 70b | `codellama/CodeLlama-70b-Instruct-hf` | - |
-
+| Meta Llama 2-13b Chat | `meta-llama/Llama-2-13b-chat-hf` | $0.25 / $0.25 |
+| Meta Llama 2-70b Chat | `meta-llama/Llama-2-70b-chat-hf` | $1.00 / $1.00 |
+| Meta Llama 3-8b Chat | `meta-llama/Llama-3-8b-chat-hf` | $0.15 / $0.15 |
+| Meta Llama 3-70b Chat | `meta-llama/Llama-3-70b-chat-hf` | $1.00 / $1.00 |
+| Mistral 7B Instruct | `mistralai/Mistral-7B-Instruct-v0.1` | $0.15 / $0.15 |
+| Mixtral 8x7B Instruct | `mistralai/Mixtral-8x7B-Instruct-v0.1` | $0.50 / $0.50 |
+| Code Llama 70b | `codellama/CodeLlama-70b-Instruct-hf` | $1.00 / $1.00 |

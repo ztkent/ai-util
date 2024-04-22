@@ -11,31 +11,31 @@ type AnyscaleModel string
 
 const (
 	// OpenAI Models
-	GPT35Turbo       OpenAIModel = "gpt-3.5-turbo"
-	GPT4TurboPreview OpenAIModel = "gpt-4-turbo-preview"
-	GPT4Turbo        OpenAIModel = "gpt-4-turbo"
+	GPT35Turbo OpenAIModel = "gpt-3.5-turbo" // IN: $0.50 / 1M tokens, OUT: $1.50 / 1M tokens
+	GPT4       OpenAIModel = "gpt-4"         // IN: $30.00 / 1M tokens, OUT: $60.00 / 1M tokens
+	GPT4Turbo  OpenAIModel = "gpt-4-turbo"   // IN: $10.00 / 1M tokens, OUT: $30.00 / 1M tokens
 	// Open-Source Models via Replicate
-	MetaLlama270b         ReplicateModel = "meta/llama-2-70b"                     // $0.65 / 1M tokens, $2.75 / 1M tokens
-	MetaLlama213b         ReplicateModel = "meta/llama-2-13b"                     // $0.10 / 1M tokens, $0.50 / 1M tokens
-	MetaLlama27b          ReplicateModel = "meta/llama-2-7b"                      // $0.05 / 1M tokens, $0.25 / 1M tokens
-	MetaLlama270bChat     ReplicateModel = "meta/llama-2-70b-chat"                // $0.65 / 1M tokens, $2.75 / 1M tokens
-	MetaLlama213bChat     ReplicateModel = "meta/llama-2-13b-chat"                // $0.10 / 1M tokens, $0.50 / 1M tokens
-	MetaLlama27bChat      ReplicateModel = "meta/llama-2-7b-chat"                 // $0.05 / 1M tokens, $0.25 / 1M tokens
-	MetaLlama38b          ReplicateModel = "meta/meta-llama-3-8b"                 // $0.05 / 1M tokens, $0.25 / 1M tokens
-	MetaLlama370b         ReplicateModel = "meta/meta-llama-3-70b"                // $0.65 / 1M tokens, $2.75 / 1M tokens
-	MetaLlama38bInstruct  ReplicateModel = "meta/meta-llama-3-8b-instruct"        // $0.05 / 1M tokens, $0.25 / 1M tokens
-	MetaLlama370bInstruct ReplicateModel = "meta/meta-llama-3-70b-instruct"       // $0.65 / 1M tokens, $2.75 / 1M tokens
-	Mistral7B             ReplicateModel = "mistralai/mistral-7b-v0.1"            // $0.05 / 1M tokens, $0.25 / 1M tokens
-	Mistral7BInstruct     ReplicateModel = "mistralai/mistral-7b-instruct-v0.2"   // $0.05 / 1M tokens, $0.25 / 1M tokens
-	Mixtral8x7BInstruct   ReplicateModel = "mistralai/mixtral-8x7b-instruct-v0.1" // $0.30 / 1M tokens, $1.00 / 1M tokens
+	MetaLlama270b         ReplicateModel = "meta/llama-2-70b"                     // IN: $0.65 / 1M tokens, OUT: $2.75 / 1M tokens
+	MetaLlama213b         ReplicateModel = "meta/llama-2-13b"                     // IN: $0.10 / 1M tokens, OUT: $0.50 / 1M tokens
+	MetaLlama27b          ReplicateModel = "meta/llama-2-7b"                      // IN: $0.05 / 1M tokens, OUT: $0.25 / 1M tokens
+	MetaLlama213bChat     ReplicateModel = "meta/llama-2-13b-chat"                // IN: $0.10 / 1M tokens, OUT: $0.50 / 1M tokens
+	MetaLlama270bChat     ReplicateModel = "meta/llama-2-70b-chat"                // IN: $0.65 / 1M tokens, OUT: $2.75 / 1M tokens
+	MetaLlama27bChat      ReplicateModel = "meta/llama-2-7b-chat"                 // IN: $0.05 / 1M tokens, OUT: $0.25 / 1M tokens
+	MetaLlama38b          ReplicateModel = "meta/meta-llama-3-8b"                 // IN: $0.05 / 1M tokens, OUT: $0.25 / 1M tokens
+	MetaLlama370b         ReplicateModel = "meta/meta-llama-3-70b"                // IN: $0.65 / 1M tokens, OUT: $2.75 / 1M tokens
+	MetaLlama38bInstruct  ReplicateModel = "meta/meta-llama-3-8b-instruct"        // IN: $0.05 / 1M tokens, OUT: $0.25 / 1M tokens
+	MetaLlama370bInstruct ReplicateModel = "meta/meta-llama-3-70b-instruct"       // IN: $0.65 / 1M tokens, OUT: $2.75 / 1M tokens
+	Mistral7B             ReplicateModel = "mistralai/mistral-7b-v0.1"            // IN: $0.05 / 1M tokens, OUT: $0.25 / 1M tokens
+	Mistral7BInstruct     ReplicateModel = "mistralai/mistral-7b-instruct-v0.2"   // IN: $0.05 / 1M tokens, OUT: $0.25 / 1M tokens
+	Mixtral8x7BInstruct   ReplicateModel = "mistralai/mixtral-8x7b-instruct-v0.1" // IN: $0.30 / 1M tokens, OUT: $1.00 / 1M tokens
 	// Open-Source Models via Anyscale
-	Anyscale_MetaLlama27bChat    AnyscaleModel = "meta-llama/Llama-2-7b-chat-hf"
-	Anyscale_MetaLlama213bChat   AnyscaleModel = "meta-llama/Llama-2-13b-chat-hf"
-	Anyscale_MetaLlama270bChat   AnyscaleModel = "meta-llama/Llama-2-70b-chat-hf"
-	Anyscale_Mistral7BInstruct   AnyscaleModel = "mistralai/Mistral-7B-Instruct-v0.1"
-	Anyscale_Mixtral8x7BInstruct AnyscaleModel = "mistralai/Mixtral-8x7B-Instruct-v0.1"
-	Anyscale_CodeLlama34b        AnyscaleModel = "codellama/CodeLlama-34b-Instruct-hf"
-	Anyscale_CodeLlama70b        AnyscaleModel = "codellama/CodeLlama-70b-Instruct-hf"
+	Anyscale_MetaLlama213bChat   AnyscaleModel = "meta-llama/Llama-2-13b-chat-hf"       // IN/OUT: $0.25 / 1M tokens
+	Anyscale_MetaLlama270bChat   AnyscaleModel = "meta-llama/Llama-2-70b-chat-hf"       // IN/OUT: $1.00 / 1M tokens
+	Anyscale_MetaLlama38bChat    AnyscaleModel = "meta-llama/Llama-3-8b-chat-hf"        // IN/OUT: $0.15 / 1M tokens
+	Anyscale_MetaLlama370bChat   AnyscaleModel = "meta-llama/Llama-3-70b-chat-hf"       // IN/OUT: $1.00 / 1M tokens
+	Anyscale_Mistral7BInstruct   AnyscaleModel = "mistralai/Mistral-7B-Instruct-v0.1"   // IN/OUT: $0.15 / 1M tokens
+	Anyscale_Mixtral8x7BInstruct AnyscaleModel = "mistralai/Mixtral-8x7B-Instruct-v0.1" // IN/OUT: $0.50 / 1M tokens
+	Anyscale_CodeLlama70b        AnyscaleModel = "codellama/CodeLlama-70b-Instruct-hf"  // IN/OUT: $1.00 / 1M tokens
 )
 
 func (o OpenAIModel) String() string {
@@ -54,8 +54,8 @@ func IsOpenAIModel(name string) (OpenAIModel, bool) {
 	switch strings.ToLower(name) {
 	case GPT35Turbo.String(), "turbo35":
 		return GPT35Turbo, true
-	case GPT4TurboPreview.String(), "turbopreview":
-		return GPT4TurboPreview, true
+	case GPT4.String(), "gpt4":
+		return GPT4, true
 	case GPT4Turbo.String(), "turbo":
 		return GPT4Turbo, true
 	default:
@@ -102,8 +102,6 @@ func IsAnyscaleModel(name string) (AnyscaleModel, bool) {
 		return Anyscale_Mistral7BInstruct, true
 	case Anyscale_Mixtral8x7BInstruct.String(), "m8x7b":
 		return Anyscale_Mixtral8x7BInstruct, true
-	case Anyscale_CodeLlama34b.String(), "cl34b":
-		return Anyscale_CodeLlama34b, true
 	case Anyscale_CodeLlama70b.String(), "cl70b":
 		return Anyscale_CodeLlama70b, true
 	default:
