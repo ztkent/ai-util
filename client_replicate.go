@@ -8,6 +8,8 @@ import (
 	"github.com/replicate/replicate-go"
 )
 
+// TODO: Fix prompt and conversation
+
 type R8Client struct {
 	*replicate.Client
 	Model       string
@@ -42,11 +44,6 @@ func (c *R8Client) SendCompletionRequest(ctx context.Context, conv *Conversation
 }
 
 // SendStreamRequest sends a streaming request to the model
-// https://replicate.com/docs/streaming
-// You create a prediction with the stream option.
-// Replicate returns a prediction with a URL to receive streaming output.
-// You connect to the URL and receive a stream of updates.
-
 func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, userPrompt string, responseChan chan string, errChan chan error) {
 	defer close(responseChan)
 	defer close(errChan)
@@ -68,6 +65,7 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 		"length_penalty":    1,
 		"max_new_tokens":    512,
 		"system_prompt":     "You are a helpful assistant",
+		"prompt_template":   "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
 	}
 
 	// Run a model and wait for its output
@@ -77,13 +75,41 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 		errChan <- err
 		return
 	}
+
+	// Not every model supports streaming, so we should check if it was used
+	streamingUsed := false
+	streamResChan, streamErrChan := c.Client.StreamPrediction(ctx, pred)
+	go func() {
+		for {
+			select {
+			case event := <-streamResChan:
+				if event.Type == "output" {
+					streamingUsed = true
+					responseChan <- event.Data
+				} else if event.Type == "error" {
+					fmt.Println(event.Data)
+					errChan <- fmt.Errorf("Error in stream: %s", event.Data)
+					return
+				} else if event.Type == "done" {
+					return
+				}
+
+			case err := <-streamErrChan:
+				errChan <- err
+				return
+			}
+		}
+	}()
+
 	// Wait for the prediction to finish
 	err = c.Client.Wait(ctx, pred)
 	if err != nil {
 		errChan <- err
 		return
 	}
-	responseChan <- pred.Output.(string)
+	if !streamingUsed {
+		responseChan <- pred.Output.(string)
+	}
 }
 
 func (c *R8Client) SetTemperature(temp float32) {
