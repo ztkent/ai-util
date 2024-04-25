@@ -77,7 +77,7 @@ func ConnectReplicate(model string, temperature float32) (Client, error) {
 		return nil, fmt.Errorf("Failed to create Replicate client: %v", err)
 	}
 	client := &R8Client{Client: r8, Model: model, Temperature: temperature}
-	err = client.SetModelWithVersion(context.Background(), model)
+	err = client.SetModelWithVersion(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("Failed to set model: %v", err)
 	}

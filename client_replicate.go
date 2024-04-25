@@ -3,6 +3,7 @@ package aiutil
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/replicate/replicate-go"
 )
@@ -40,9 +41,13 @@ func (c *R8Client) SendCompletionRequest(ctx context.Context, conv *Conversation
 	return responseChat.(string), nil
 }
 
-// Available for some models
+// SendStreamRequest sends a streaming request to the model
+// https://replicate.com/docs/streaming
+// You create a prediction with the stream option.
+// Replicate returns a prediction with a URL to receive streaming output.
+// You connect to the URL and receive a stream of updates.
+
 func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, userPrompt string, responseChan chan string, errChan chan error) {
-	// TODO: Implement this method
 	defer close(responseChan)
 	defer close(errChan)
 
@@ -51,13 +56,35 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 		errChan <- fmt.Errorf("Failed to SendStreamRequest: Conversation is nil")
 		return
 	}
-	res, err := c.SendCompletionRequest(ctx, conv, userPrompt)
+
+	// Create a prediction with the stream option
+	input := replicate.PredictionInput{
+		"prompt":            userPrompt,
+		"presence_penalty":  0,
+		"frequency_penalty": 0,
+		"top_k":             0,
+		"top_p":             0.9,
+		"temperature":       0.6,
+		"length_penalty":    1,
+		"max_new_tokens":    512,
+		"system_prompt":     "You are a helpful assistant",
+		"stream":            true, // Request streaming output
+	}
+
+	// Run a model and wait for its output
+	version := strings.Split(c.Model, ":")[1]
+	pred, err := c.CreatePrediction(ctx, version, input, c.Webhook, true)
 	if err != nil {
 		errChan <- err
 		return
 	}
-	responseChan <- res
-	return
+	// Wait for the prediction to finish
+	err = c.Client.Wait(ctx, pred)
+	if err != nil {
+		errChan <- err
+		return
+	}
+	responseChan <- pred.Output.(string)
 }
 
 func (c *R8Client) SetTemperature(temp float32) {
@@ -103,18 +130,17 @@ func (c *R8Client) ListModels(ctx context.Context) ([]string, error) {
 	return models, nil
 }
 
-func (c *R8Client) SetModelWithVersion(ctx context.Context, model string) error {
-	replicateModelPage, err := c.Client.ListModels(ctx)
+func (c *R8Client) SetModelWithVersion(ctx context.Context) error {
+	modelArgs := strings.Split(c.Model, "/")
+	if len(modelArgs) != 2 {
+		return fmt.Errorf("Invalid model format: %s", c.Model)
+	}
+
+	owner, name := strings.Split(c.Model, "/")[0], strings.Split(c.Model, "/")[1]
+	currModel, err := c.Client.GetModel(ctx, owner, name)
 	if err != nil {
 		return err
 	}
-	for _, currModel := range replicateModelPage.Results {
-		currModelName := currModel.Owner + "/" + currModel.Name
-		if currModelName == model {
-			c.Model = currModel.Owner + "/" + currModel.Name + ":" + currModel.LatestVersion.ID
-			return nil
-		}
-	}
-
-	return fmt.Errorf("Model not found: %s", model)
+	c.Model = currModel.Owner + "/" + currModel.Name + ":" + currModel.LatestVersion.ID
+	return nil
 }

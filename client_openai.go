@@ -7,6 +7,8 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
+// The OAIClient struct is a wrapper around the OpenAI client
+// It can support both OpenAI and Anyscale requests (which use an OpenAI client)
 type OAIClient struct {
 	*openai.Client
 	Model       string
@@ -126,12 +128,12 @@ func (c *OAIClient) SetWebhook(url string, events []string) error {
 }
 
 func (c *OAIClient) ListModels(ctx context.Context) ([]string, error) {
-	openAIModels, err := c.Client.ListModels(ctx)
+	providerModels, err := c.Client.ListModels(ctx)
 	if err != nil {
 		return nil, err
 	}
 	models := make([]string, 0)
-	for _, model := range openAIModels.Models {
+	for _, model := range providerModels.Models {
 		models = append(models, model.ID)
 	}
 	return models, nil
