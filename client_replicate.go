@@ -68,7 +68,6 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 		"length_penalty":    1,
 		"max_new_tokens":    512,
 		"system_prompt":     "You are a helpful assistant",
-		"stream":            true, // Request streaming output
 	}
 
 	// Run a model and wait for its output
