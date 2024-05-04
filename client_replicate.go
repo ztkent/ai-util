@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/replicate/replicate-go"
+	"github.com/sashabaranov/go-openai"
 )
 
 // TODO: Fix prompt and conversation
@@ -20,6 +21,15 @@ type R8Client struct {
 // Waits for the entire response to be returned
 // Adds the users request, and the response to the conversation
 func (c *R8Client) SendCompletionRequest(ctx context.Context, conv *Conversation, userPrompt string) (string, error) {
+	// Add the latest message to the conversation
+	err := conv.Append(openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: userPrompt,
+	})
+	if err != nil {
+		return "", err
+	}
+
 	input := replicate.PredictionInput{
 		"prompt":            userPrompt,
 		"presence_penalty":  0,
@@ -39,7 +49,14 @@ func (c *R8Client) SendCompletionRequest(ctx context.Context, conv *Conversation
 	} else if responseChat == nil {
 		return "", fmt.Errorf("Failed to get response from model")
 	}
-	fmt.Println(responseChat)
+	// Add the response to the conversation
+	err = conv.Append(openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleAssistant,
+		Content: responseChat.(string),
+	})
+	if err != nil {
+		return "", err
+	}
 	return responseChat.(string), nil
 }
 
@@ -51,6 +68,15 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 	// Ensure we have a conversation to work with
 	if conv == nil {
 		errChan <- fmt.Errorf("Failed to SendStreamRequest: Conversation is nil")
+		return
+	}
+	// Add the latest message to the conversation
+	err := conv.Append(openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: userPrompt,
+	})
+	if err != nil {
+		errChan <- err
 		return
 	}
 
@@ -78,6 +104,7 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 
 	// Not every model supports streaming, so we should check if it was used
 	streamingUsed := false
+	responseChat := ""
 	streamResChan, streamErrChan := c.Client.StreamPrediction(ctx, pred)
 	go func() {
 		for {
@@ -85,6 +112,7 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 			case event := <-streamResChan:
 				if event.Type == "output" {
 					streamingUsed = true
+					responseChat += event.Data
 					responseChan <- event.Data
 				} else if event.Type == "error" {
 					fmt.Println(event.Data)
@@ -109,6 +137,17 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 	}
 	if !streamingUsed {
 		responseChan <- pred.Output.(string)
+		responseChat += pred.Output.(string)
+	}
+
+	// Add the response to the conversation, once the stream is closed
+	err = conv.Append(openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleAssistant,
+		Content: responseChat,
+	})
+	if err != nil {
+		errChan <- err
+		return
 	}
 }
 
