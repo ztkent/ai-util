@@ -2,6 +2,7 @@ package aiutil
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -16,16 +17,6 @@ type Conversation struct {
 	id         uuid.UUID
 	*sync.Mutex
 }
-
-const (
-	/*
-		04/12/2024 Pricing:
-		gpt-3.5-turbo-0125			Input: $0.50 / 1M tokens 	Output: $1.50 / 1M tokens
-		gpt-4-turbo-2024-04-09		Input: $10.00 / 1M tokens	Output: $30.00 / 1M tokens
-		Mixtral-8x7B-Instruct-v0.1	Input: 0.50 / 1M tokens 	Output: 0.50 / 1M tokens
-	*/
-	DefaultMaxTokens = 100000 // $0.05, $0.15 | $1.00, $3.00
-)
 
 // Start a new conversation with the system prompt
 // A system prompt defines the initial context of the conversation
@@ -96,4 +87,18 @@ func (c *Conversation) AddReference(id string, content string) error {
 		Role:         openai.ChatMessageRoleSystem,
 		MultiContent: messageParts,
 	})
+}
+
+func (c *Conversation) History() string {
+	// First message is a system prompt, last is the current user prompt
+	if len(c.Messages) < 3 {
+		return ""
+	}
+
+	var str strings.Builder
+	str.WriteString(fmt.Sprintf("History: \n"))
+	for _, m := range c.Messages[1 : len(c.Messages)-2] {
+		str.WriteString(fmt.Sprintf("Role: %s, Content: %s\n", m.Role, m.Content))
+	}
+	return str.String()
 }
