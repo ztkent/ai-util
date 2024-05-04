@@ -1,5 +1,5 @@
 # AI Util
-A unified platform to build better apps with AI.  
+A unified platform to build apps with AI.  
 
 ## Features 
 - Supported AI Providers:
@@ -17,8 +17,8 @@ go get github.com/ztkent/ai-util
 
 ## Example
 ```go
-	client, _ := aiutil.NewAIClient("openai", "gpt-3.5-turbo", 0.5)
-	conversation := aiutil.NewConversation("You are an example assistant.", 100000, true)
+    client, _ := aiutil.NewAIClient("openai", "gpt-3.5-turbo", 0.5)
+    conversation := aiutil.NewConversation("You are an example assistant.", 100000, true)
     response, _ := client.SendCompletionRequest(CtxWithTimeout, conversation, "Say hello!")
 ```
 
