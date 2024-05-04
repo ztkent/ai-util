@@ -2,6 +2,7 @@ package aiutil
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -86,4 +87,18 @@ func (c *Conversation) AddReference(id string, content string) error {
 		Role:         openai.ChatMessageRoleSystem,
 		MultiContent: messageParts,
 	})
+}
+
+func (c *Conversation) History() string {
+	// First message is a system prompt, last is the current user prompt
+	if len(c.Messages) < 3 {
+		return ""
+	}
+
+	var str strings.Builder
+	str.WriteString(fmt.Sprintf("History: \n"))
+	for _, m := range c.Messages[1 : len(c.Messages)-2] {
+		str.WriteString(fmt.Sprintf("Role: %s, Content: %s\n", m.Role, m.Content))
+	}
+	return str.String()
 }

@@ -31,17 +31,22 @@ func (c *R8Client) SendCompletionRequest(ctx context.Context, conv *Conversation
 	}
 
 	input := replicate.PredictionInput{
-		"prompt":            userPrompt,
+		"prompt":            conv.History() + "Current Request: " + userPrompt,
 		"presence_penalty":  0,
 		"frequency_penalty": 0,
 		"top_k":             0,
 		"top_p":             0.9,
-		"temperature":       0.6,
+		"temperature":       0.5,
 		"length_penalty":    1,
 		"max_new_tokens":    512,
-		"system_prompt":     "You are a helpful assistant",
-		"prompt_template":   "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
+		"system_prompt":     conv.Messages[0].Content,
+		"prompt_template": `<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+		Answer only the 'Current Request'.
+		<|eot_id|><|start_header_id|>user<|end_header_id|>		
+		{prompt} 
+		<|eot_id|><|start_header_id|><|end_header_id|>`,
 	}
+
 	// Run a model and wait for its output
 	responseChat, err := c.Run(ctx, c.Model, input, c.Webhook)
 	if err != nil {
@@ -49,15 +54,34 @@ func (c *R8Client) SendCompletionRequest(ctx context.Context, conv *Conversation
 	} else if responseChat == nil {
 		return "", fmt.Errorf("Failed to get response from model")
 	}
+	// Check and convert responseChat to a string
+	var responseStr string
+	switch v := responseChat.(type) {
+	case string:
+		responseStr = v
+	case []interface{}:
+		var strSlice []string
+		for _, item := range v {
+			str, ok := item.(string)
+			if !ok {
+				return "", fmt.Errorf("item in responseChat slice is not a string")
+			}
+			strSlice = append(strSlice, str)
+		}
+		responseStr = strings.Join(strSlice, "")
+	default:
+		return "", fmt.Errorf("responseChat is invalid type")
+	}
+
 	// Add the response to the conversation
 	err = conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
-		Content: responseChat.(string),
+		Content: responseStr,
 	})
 	if err != nil {
 		return "", err
 	}
-	return responseChat.(string), nil
+	return responseStr, nil
 }
 
 // SendStreamRequest sends a streaming request to the model
@@ -82,16 +106,21 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 
 	// Create a prediction with the stream option
 	input := replicate.PredictionInput{
-		"prompt":            userPrompt,
-		"presence_penalty":  0,
+		"prompt":            conv.History() + "Current Request: " + userPrompt,
+		"presence_penalty":  0.4,
 		"frequency_penalty": 0,
 		"top_k":             0,
 		"top_p":             0.9,
-		"temperature":       0.6,
+		"temperature":       0.5,
 		"length_penalty":    1,
-		"max_new_tokens":    512,
-		"system_prompt":     "You are a helpful assistant",
-		"prompt_template":   "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
+		"max_new_tokens":    1024,
+		"system_prompt":     conv.Messages[0].Content,
+		"prompt_template": `<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+		Answer only the 'Current Request'.
+		<|eot_id|><|start_header_id|>user<|end_header_id|>		
+		{prompt} 
+		<|eot_id|><|start_header_id|><|end_header_id|>
+		[END]`,
 	}
 
 	// Run a model and wait for its output
@@ -112,6 +141,14 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 			case event := <-streamResChan:
 				if event.Type == "output" {
 					streamingUsed = true
+					// TODO: This should work with [END], but it doesn't..
+					if strings.Contains(event.Data, "assistant\n\n") {
+						// remove the assistant prompt
+						lastToken := event.Data[:strings.LastIndex(event.Data, "assistant")]
+						responseChat += lastToken
+						responseChan <- lastToken
+						return
+					}
 					responseChat += event.Data
 					responseChan <- event.Data
 				} else if event.Type == "error" {
