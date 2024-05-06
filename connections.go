@@ -15,7 +15,7 @@ const (
 	DefaultProvider       = "openai"
 	DefaultOpenAIModel    = GPT35Turbo
 	DefaultReplicateModel = MetaLlama38b
-	DefaultAnyscaleModel  = Anyscale_Mixtral8x7BInstruct
+	DefaultAnyscaleModel  = Anyscale_MetaLlama38bChat
 	DefaultTemp           = 0.2
 	DefaultMaxTokens      = 100000
 )
