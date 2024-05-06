@@ -35,15 +35,6 @@ func NewAIClient(aiProvider string, model string, temperature float64) (Client, 
 		"replicate": ConnectReplicate,
 	}
 
-	// Check if we need to switch the provider
-	_, isAnyscaleModel := IsAnyscaleModel(model)
-	_, isReplicateModel := IsReplicateModel(model)
-	if isAnyscaleModel {
-		aiProvider = "anyscale"
-	} else if isReplicateModel {
-		aiProvider = "replicate"
-	}
-
 	// Check if the provider is valid
 	connectFunc, ok := connectFuncs[aiProvider]
 	if !ok {
