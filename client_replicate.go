@@ -188,10 +188,18 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 	}
 }
 
+func (c *R8Client) GetTemperature() float32 {
+	return c.Temperature
+}
+
 func (c *R8Client) SetTemperature(temp float32) {
 	if temp >= 0.0 && temp <= 1.0 {
 		c.Temperature = temp
 	}
+}
+
+func (c *R8Client) GetModel() string {
+	return c.Model
 }
 
 func (c *R8Client) SetModel(model string) {
@@ -219,6 +227,7 @@ func (c *R8Client) SetWebhook(url string, events []string) error {
 	}
 	return nil
 }
+
 func (c *R8Client) ListModels(ctx context.Context) ([]string, error) {
 	replicateModelPage, err := c.Client.ListModels(ctx)
 	if err != nil {
