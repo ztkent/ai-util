@@ -14,6 +14,7 @@ const (
 	GPT35Turbo OpenAIModel = "gpt-3.5-turbo" // IN: $0.50 / 1M tokens, OUT: $1.50 / 1M tokens
 	GPT4       OpenAIModel = "gpt-4"         // IN: $30.00 / 1M tokens, OUT: $60.00 / 1M tokens
 	GPT4Turbo  OpenAIModel = "gpt-4-turbo"   // IN: $10.00 / 1M tokens, OUT: $30.00 / 1M tokens
+	GPT4O      OpenAIModel = "gpt-4o"        // IN: $5.00 / 1M tokens, OUT: $15.00 / 1M tokens
 	// Open-Source Models via Replicate
 	MetaLlama38b          ReplicateModel = "meta/meta-llama-3-8b"                 // IN: $0.05 / 1M tokens, OUT: $0.25 / 1M tokens
 	MetaLlama370b         ReplicateModel = "meta/meta-llama-3-70b"                // IN: $0.65 / 1M tokens, OUT: $2.75 / 1M tokens
@@ -50,6 +51,8 @@ func IsOpenAIModel(name string) (OpenAIModel, bool) {
 		return GPT4, true
 	case GPT4Turbo.String(), "turbo":
 		return GPT4Turbo, true
+	case GPT4O.String(), "gpt4o":
+		return GPT4O, true
 	default:
 		return "", false
 	}
