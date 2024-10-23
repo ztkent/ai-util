@@ -60,7 +60,7 @@ func ConnectOpenAI(model string, temperature float32) (Client, error) {
 }
 
 func ConnectReplicate(model string, temperature float32) (Client, error) {
-	r8, err := replicate.NewClient(replicate.WithTokenFromEnv()) // REPLICATE_API_TOKEN
+	r8, err := replicate.NewClient(replicate.WithTokenFromEnv())
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create Replicate client: %v", err)
 	}

@@ -31,7 +31,7 @@ func (c *R8Client) SendCompletionRequest(ctx context.Context, conv *Conversation
 	}
 
 	input := replicate.PredictionInput{
-		"prompt":            conv.History() + "Current Request: " + userPrompt,
+		"prompt":            userPrompt,
 		"presence_penalty":  0,
 		"frequency_penalty": 0,
 		"top_k":             0,
@@ -106,7 +106,7 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 
 	// Create a prediction with the stream option
 	input := replicate.PredictionInput{
-		"prompt":            conv.History() + "Current Request: " + userPrompt,
+		"prompt":            userPrompt,
 		"presence_penalty":  0.4,
 		"frequency_penalty": 0,
 		"top_k":             0,
@@ -143,7 +143,6 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 					streamingUsed = true
 					// TODO: This should work with [END], but it doesn't..
 					if strings.Contains(event.Data, "assistant\n\n") {
-						// remove the assistant prompt
 						lastToken := event.Data[:strings.LastIndex(event.Data, "assistant")]
 						responseChat += lastToken
 						responseChan <- lastToken
