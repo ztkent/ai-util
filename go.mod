@@ -1,4 +1,4 @@
-module github.com/Ztkent/ai-util
+module github.com/ztkent/ai-util
 
 go 1.22.0
 
