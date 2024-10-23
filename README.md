@@ -7,7 +7,7 @@ A unified platform to build apps with AI.
     - [Replicate](https://replicate.com/docs)
 - Conversation Controls
 - Token Management + Limits
-- Simple RAG
+- Resource Management
 
 ## Installation
 ```bash
