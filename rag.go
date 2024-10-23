@@ -14,9 +14,9 @@ import (
 
 // Determine if the user's input contains a resource command
 // There is usually some limit to the number of tokens
-func ManageRAG(conv *Conversation, userInput string) (string, []string, error) {
+func ManageResources(conv *Conversation, userInput string) (string, []string, error) {
 	if conv == nil {
-		return userInput, []string{}, fmt.Errorf("Failed to ManageRAG: Conversation is nil")
+		return userInput, []string{}, fmt.Errorf("Failed to ManageResources: Conversation is nil")
 	} else if len(userInput) == 0 {
 		return userInput, []string{}, nil
 	}

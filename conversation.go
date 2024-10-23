@@ -10,18 +10,18 @@ import (
 )
 
 type Conversation struct {
-	Messages   []openai.ChatCompletionMessage
-	TokenCount int
-	MaxTokens  int
-	RagEnabled bool
-	id         uuid.UUID
+	Messages         []openai.ChatCompletionMessage
+	TokenCount       int
+	MaxTokens        int
+	ResourcesEnabled bool
+	id               uuid.UUID
 	*sync.Mutex
 }
 
 // Start a new conversation with the system prompt
 // A system prompt defines the initial context of the conversation
 // This includes the persona of the bot and any information that you want to provide to the model.
-func NewConversation(systemPrompt string, maxTokens int, ragEnabled bool) *Conversation {
+func NewConversation(systemPrompt string, maxTokens int, resourcesEnabled bool) *Conversation {
 	if maxTokens == 0 {
 		maxTokens = DefaultMaxTokens
 	}
@@ -32,10 +32,10 @@ func NewConversation(systemPrompt string, maxTokens int, ragEnabled bool) *Conve
 				Content: systemPrompt,
 			},
 		},
-		MaxTokens:  maxTokens,
-		RagEnabled: ragEnabled,
-		id:         uuid.New(),
-		Mutex:      &sync.Mutex{},
+		MaxTokens:        maxTokens,
+		ResourcesEnabled: resourcesEnabled,
+		id:               uuid.New(),
+		Mutex:            &sync.Mutex{},
 	}
 	return conv
 }
