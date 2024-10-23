@@ -1,13 +1,11 @@
 package aiutil
 
 import (
-	"fmt"
 	"strings"
 )
 
 type OpenAIModel string
 type ReplicateModel string
-type AnyscaleModel string
 
 const (
 	// OpenAI Models
@@ -23,12 +21,6 @@ const (
 	Mistral7B             ReplicateModel = "mistralai/mistral-7b-v0.1"            // IN: $0.05 / 1M tokens, OUT: $0.25 / 1M tokens
 	Mistral7BInstruct     ReplicateModel = "mistralai/mistral-7b-instruct-v0.2"   // IN: $0.05 / 1M tokens, OUT: $0.25 / 1M tokens
 	Mixtral8x7BInstruct   ReplicateModel = "mistralai/mixtral-8x7b-instruct-v0.1" // IN: $0.30 / 1M tokens, OUT: $1.00 / 1M tokens
-	// Open-Source Models via Anyscale
-	Anyscale_MetaLlama38bChat    AnyscaleModel = "meta-llama/Llama-3-8b-chat-hf"        // IN/OUT: $0.15 / 1M tokens
-	Anyscale_MetaLlama370bChat   AnyscaleModel = "meta-llama/Llama-3-70b-chat-hf"       // IN/OUT: $1.00 / 1M tokens
-	Anyscale_Mistral7BInstruct   AnyscaleModel = "mistralai/Mistral-7B-Instruct-v0.1"   // IN/OUT: $0.15 / 1M tokens
-	Anyscale_Mixtral8x7BInstruct AnyscaleModel = "mistralai/Mixtral-8x7B-Instruct-v0.1" // IN/OUT: $0.50 / 1M tokens
-	Anyscale_CodeLlama70b        AnyscaleModel = "codellama/CodeLlama-70b-Instruct-hf"  // IN/OUT: $1.00 / 1M tokens
 )
 
 func (o OpenAIModel) String() string {
@@ -37,10 +29,6 @@ func (o OpenAIModel) String() string {
 
 func (r ReplicateModel) String() string {
 	return string(r)
-}
-
-func (a AnyscaleModel) String() string {
-	return string(a)
 }
 
 func IsOpenAIModel(name string) (OpenAIModel, bool) {
@@ -77,32 +65,4 @@ func IsReplicateModel(name string) (ReplicateModel, bool) {
 	default:
 		return "", false
 	}
-}
-
-func IsAnyscaleModel(name string) (AnyscaleModel, bool) {
-	switch strings.ToLower(name) {
-	case Anyscale_MetaLlama38bChat.String(), "l3-8b":
-		return Anyscale_MetaLlama38bChat, true
-	case Anyscale_MetaLlama370bChat.String(), "l3-70b":
-		return Anyscale_MetaLlama370bChat, true
-	case Anyscale_Mistral7BInstruct.String(), "m7b":
-		return Anyscale_Mistral7BInstruct, true
-	case Anyscale_Mixtral8x7BInstruct.String(), "m8x7b":
-		return Anyscale_Mixtral8x7BInstruct, true
-	case Anyscale_CodeLlama70b.String(), "cl70b":
-		return Anyscale_CodeLlama70b, true
-	default:
-		return "", false
-	}
-}
-
-func GetModelProvider(name string) (Provider, error) {
-	if _, ok := IsOpenAIModel(name); ok {
-		return OpenAI, nil
-	} else if _, ok := IsReplicateModel(name); ok {
-		return Replicate, nil
-	} else if _, ok := IsAnyscaleModel(name); ok {
-		return Anyscale, nil
-	}
-	return "", fmt.Errorf("Invalid model name: %s", name)
 }

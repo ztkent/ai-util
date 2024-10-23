@@ -8,7 +8,6 @@ import (
 )
 
 // The OAIClient struct is a wrapper around the OpenAI client
-// It can support both OpenAI and Anyscale requests (which use an OpenAI client)
 type OAIClient struct {
 	*openai.Client
 	Model       string

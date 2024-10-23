@@ -20,6 +20,5 @@ type Provider string
 
 const (
 	OpenAI    Provider = "openai"
-	Anyscale  Provider = "anyscale"
 	Replicate Provider = "replicate"
 )

@@ -4,7 +4,6 @@ A unified platform to build apps with AI.
 ## Features 
 - Supported AI Providers:
     - [OpenAI](https://platform.openai.com/docs/overview)
-    - [Anyscale](https://docs.endpoints.anyscale.com/)
     - [Replicate](https://replicate.com/docs)
 - Conversation Controls
 - Token Management + Limits
@@ -26,7 +25,6 @@ go get github.com/ztkent/ai-util
 | Service   | Environment Variable     |
 |-----------|--------------------------|
 | OpenAI    | `OPENAI_API_KEY`         |
-| Anyscale  | `ANYSCALE_ENDPOINT_TOKEN`|
 | Replicate | `REPLICATE_API_TOKEN`    |
 
 ## Available Models
@@ -36,17 +34,6 @@ go get github.com/ztkent/ai-util
 | GPT-3.5 Turbo | `gpt-3.5-turbo` | $0.50 / $1.50 |
 | GPT-4 | `gpt-4` | $30.00 / $60.00 |
 | GPT-4 Turbo | `gpt-4-turbo` | $10.00 / $30.00 |
-
-### Anyscale Models
-| Model Name | Model Identifier | Cost (IN/OUT per 1M tokens) |
-|------------|------------------|-----------------------------|
-| Meta Llama 2-13b Chat | `meta-llama/Llama-2-13b-chat-hf` | $0.25 / $0.25 |
-| Meta Llama 2-70b Chat | `meta-llama/Llama-2-70b-chat-hf` | $1.00 / $1.00 |
-| Meta Llama 3-8b Chat | `meta-llama/Llama-3-8b-chat-hf` | $0.15 / $0.15 |
-| Meta Llama 3-70b Chat | `meta-llama/Llama-3-70b-chat-hf` | $1.00 / $1.00 |
-| Mistral 7B Instruct | `mistralai/Mistral-7B-Instruct-v0.1` | $0.15 / $0.15 |
-| Mixtral 8x7B Instruct | `mistralai/Mixtral-8x7B-Instruct-v0.1` | $0.50 / $0.50 |
-| Code Llama 70b | `codellama/CodeLlama-70b-Instruct-hf` | $1.00 / $1.00 |
 
 ### Replicate Models
 | Model Name | Model Identifier | Cost (IN/OUT per 1M tokens) |

@@ -15,7 +15,6 @@ const (
 	DefaultProvider       = "openai"
 	DefaultOpenAIModel    = GPT35Turbo
 	DefaultReplicateModel = MetaLlama38b
-	DefaultAnyscaleModel  = Anyscale_MetaLlama38bChat
 	DefaultTemp           = 0.2
 	DefaultMaxTokens      = 100000
 )
@@ -24,21 +23,19 @@ func NewAIClient(aiProvider string, model string, temperature float64) (Client, 
 	// Define a map of default models for each provider
 	defaultModels := map[string]string{
 		"openai":    DefaultOpenAIModel.String(),
-		"anyscale":  DefaultAnyscaleModel.String(),
 		"replicate": DefaultReplicateModel.String(),
 	}
 
 	// Define a map of connection functions for each provider
 	connectFuncs := map[string]func(string, float32) (Client, error){
 		"openai":    ConnectOpenAI,
-		"anyscale":  ConnectAnyscale,
 		"replicate": ConnectReplicate,
 	}
 
 	// Check if the provider is valid
 	connectFunc, ok := connectFuncs[aiProvider]
 	if !ok {
-		return nil, fmt.Errorf("Invalid AI provider: %s provided, select either anyscale, openai, or replicate", aiProvider)
+		return nil, fmt.Errorf("Invalid AI provider: %s provided, select either openai, or replicate", aiProvider)
 	}
 
 	// Load the API key for the provider
@@ -75,14 +72,6 @@ func ConnectReplicate(model string, temperature float32) (Client, error) {
 	return client, nil
 }
 
-func ConnectAnyscale(model string, temperature float32) (Client, error) {
-	config := openai.DefaultConfig(os.Getenv("ANYSCALE_ENDPOINT_TOKEN"))
-	config.BaseURL = "https://api.endpoints.anyscale.com/v1"
-	asClient := openai.NewClientWithConfig(config)
-	client := &OAIClient{Client: asClient, Model: model, Temperature: temperature}
-	return client, CheckConnection(client)
-}
-
 func CheckConnection(client Client) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -115,12 +104,6 @@ func LoadAPIKey(provider Provider) error {
 	case Replicate:
 		{
 			if err := loadEnvVar("REPLICATE_API_TOKEN"); err != nil {
-				return err
-			}
-		}
-	case Anyscale:
-		{
-			if err := loadEnvVar("ANYSCALE_ENDPOINT_TOKEN"); err != nil {
 				return err
 			}
 		}
