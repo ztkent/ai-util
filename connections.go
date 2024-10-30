@@ -13,7 +13,7 @@ import (
 
 const (
 	DefaultProvider       = "openai"
-	DefaultOpenAIModel    = GPT35Turbo
+	DefaultOpenAIModel    = GPT4OMini
 	DefaultReplicateModel = MetaLlama38b
 	DefaultTemp           = 0.2
 	DefaultMaxTokens      = 100000
