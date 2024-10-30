@@ -202,7 +202,7 @@ func (c *R8Client) GetModel() string {
 }
 
 func (c *R8Client) SetModel(model string) {
-	if _, ok := IsReplicateModel(model); ok {
+	if _, ok := IsSupportedReplicateModel(model); ok {
 		c.Model = model
 	}
 }

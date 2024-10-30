@@ -127,7 +127,9 @@ func (c *OAIClient) GetModel() string {
 }
 
 func (c *OAIClient) SetModel(model string) {
-	c.Model = model
+	if _, ok := IsSupportedOpenAIModel(model); ok {
+		c.Model = model
+	}
 }
 
 func (c *OAIClient) SetWebhook(url string, events []string) error {

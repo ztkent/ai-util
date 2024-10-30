@@ -9,18 +9,21 @@ type ReplicateModel string
 
 const (
 	// OpenAI Models
-	GPT35Turbo OpenAIModel = "gpt-3.5-turbo" // IN: $0.50 / 1M tokens, OUT: $1.50 / 1M tokens
-	GPT4       OpenAIModel = "gpt-4"         // IN: $30.00 / 1M tokens, OUT: $60.00 / 1M tokens
-	GPT4Turbo  OpenAIModel = "gpt-4-turbo"   // IN: $10.00 / 1M tokens, OUT: $30.00 / 1M tokens
-	GPT4O      OpenAIModel = "gpt-4o"        // IN: $5.00 / 1M tokens, OUT: $15.00 / 1M tokens
+	GPT35Turbo OpenAIModel = "gpt-3.5-turbo"
+	GPT4       OpenAIModel = "gpt-4"
+	GPT4Turbo  OpenAIModel = "gpt-4-turbo"
+	GPT4O      OpenAIModel = "gpt-4o"
+	GPT4OMini  OpenAIModel = "gpt-4o-mini"
+	O1Preview  OpenAIModel = "o1-preview"
+	O1Mini     OpenAIModel = "o1-mini"
 	// Open-Source Models via Replicate
-	MetaLlama38b          ReplicateModel = "meta/meta-llama-3-8b"                 // IN: $0.05 / 1M tokens, OUT: $0.25 / 1M tokens
-	MetaLlama370b         ReplicateModel = "meta/meta-llama-3-70b"                // IN: $0.65 / 1M tokens, OUT: $2.75 / 1M tokens
-	MetaLlama38bInstruct  ReplicateModel = "meta/meta-llama-3-8b-instruct"        // IN: $0.05 / 1M tokens, OUT: $0.25 / 1M tokens
-	MetaLlama370bInstruct ReplicateModel = "meta/meta-llama-3-70b-instruct"       // IN: $0.65 / 1M tokens, OUT: $2.75 / 1M tokens
-	Mistral7B             ReplicateModel = "mistralai/mistral-7b-v0.1"            // IN: $0.05 / 1M tokens, OUT: $0.25 / 1M tokens
-	Mistral7BInstruct     ReplicateModel = "mistralai/mistral-7b-instruct-v0.2"   // IN: $0.05 / 1M tokens, OUT: $0.25 / 1M tokens
-	Mixtral8x7BInstruct   ReplicateModel = "mistralai/mixtral-8x7b-instruct-v0.1" // IN: $0.30 / 1M tokens, OUT: $1.00 / 1M tokens
+	MetaLlama38b          ReplicateModel = "meta/meta-llama-3-8b"
+	MetaLlama370b         ReplicateModel = "meta/meta-llama-3-70b"
+	MetaLlama38bInstruct  ReplicateModel = "meta/meta-llama-3-8b-instruct"
+	MetaLlama370bInstruct ReplicateModel = "meta/meta-llama-3-70b-instruct"
+	Mistral7B             ReplicateModel = "mistralai/mistral-7b-v0.1"
+	Mistral7BInstruct     ReplicateModel = "mistralai/mistral-7b-instruct-v0.2"
+	Mixtral8x7BInstruct   ReplicateModel = "mistralai/mixtral-8x7b-instruct-v0.1"
 )
 
 func (o OpenAIModel) String() string {
@@ -31,7 +34,7 @@ func (r ReplicateModel) String() string {
 	return string(r)
 }
 
-func IsOpenAIModel(name string) (OpenAIModel, bool) {
+func IsSupportedOpenAIModel(name string) (OpenAIModel, bool) {
 	switch strings.ToLower(name) {
 	case GPT35Turbo.String(), "turbo35":
 		return GPT35Turbo, true
@@ -41,12 +44,18 @@ func IsOpenAIModel(name string) (OpenAIModel, bool) {
 		return GPT4Turbo, true
 	case GPT4O.String(), "gpt4o":
 		return GPT4O, true
+	case GPT4OMini.String(), "gpt4o-mini":
+		return GPT4OMini, true
+	case O1Preview.String(), "o1-preview":
+		return O1Preview, true
+	case O1Mini.String(), "o1-mini":
+		return O1Mini, true
 	default:
 		return "", false
 	}
 }
 
-func IsReplicateModel(name string) (ReplicateModel, bool) {
+func IsSupportedReplicateModel(name string) (ReplicateModel, bool) {
 	switch strings.ToLower(name) {
 	case MetaLlama38b.String(), "l3-8b":
 		return MetaLlama38b, true

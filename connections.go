@@ -47,6 +47,20 @@ func NewAIClient(aiProvider string, model string, temperature float64) (Client, 
 	// Use the default model if none is provided
 	if model == "" {
 		model = defaultModels[aiProvider]
+	} else if aiProvider == "openai" {
+		if oaiModel, ok := IsSupportedOpenAIModel(model); ok {
+			model = oaiModel.String()
+		} else {
+			return nil, fmt.Errorf("Invalid model: %s provided, select a valid model from the provider: %s", model, aiProvider)
+		}
+	} else if aiProvider == "replicate" {
+		if repModel, ok := IsSupportedReplicateModel(model); ok {
+			model = repModel.String()
+		} else {
+			return nil, fmt.Errorf("Invalid model: %s provided, select a valid model from the provider: %s", model, aiProvider)
+		}
+	} else {
+		return nil, fmt.Errorf("Invalid model: %s provided, select a valid model from the provider: %s", model, aiProvider)
 	}
 
 	// Connect to the AI provider
