@@ -1,6 +1,7 @@
 package aiutil
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,15 +16,22 @@ import (
 // Determine if the user's input contains a resource command
 // There is usually some limit to the number of tokens
 func ManageResources(conv *Conversation, userInput string) (string, []string, error) {
+	resourcesFound := []string{}
 	if conv == nil {
-		return userInput, []string{}, fmt.Errorf("Failed to ManageResources: Conversation is nil")
+		return userInput, resourcesFound, fmt.Errorf("Failed to ManageResources: Conversation is nil")
 	} else if len(userInput) == 0 {
-		return userInput, []string{}, nil
+		return userInput, resourcesFound, nil
+	}
+
+	// Check if there is any input from stdin
+	stdinInput := readFromStdinPipe()
+	if stdinInput != "" {
+		resourcesFound = append(resourcesFound, "stdin:"+stdinInput)
+		conv.AddReference("User Input", stdinInput)
 	}
 
 	// Only supporting URL and File resources for now
 	var resourceCommands = []string{"url", "file"}
-	resourcesFound := []string{}
 	for _, cmd := range resourceCommands {
 		re := regexp.MustCompile(fmt.Sprintf(`\-%s:(.*)`, cmd))
 		matches := re.FindAllStringSubmatch(strings.ToLower(userInput), -1)
@@ -135,4 +143,18 @@ func AddFileMessage(conv *Conversation, path string) error {
 		return conv.AddReference(path, resContent)
 	}
 	return fmt.Errorf("Skipped adding empty file reference: " + path)
+}
+
+func readFromStdinPipe() string {
+	info, _ := os.Stdin.Stat()
+	if (info.Mode() & os.ModeNamedPipe) != 0 {
+		scanner := bufio.NewScanner(os.Stdin)
+		var input strings.Builder
+		for scanner.Scan() {
+			input.WriteString(scanner.Text())
+			input.WriteRune('\n')
+		}
+		return input.String()
+	}
+	return ""
 }
