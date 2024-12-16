@@ -1,12 +1,12 @@
 # AI Util
-A unified platform to build apps with AI.  
+A framework for building with AI
 
 ## Features 
 - Supported AI Providers:
     - [OpenAI](https://platform.openai.com/docs/overview)
     - [Replicate](https://replicate.com/docs)
 - Conversation Controls
-- Token Management + Limits
+- Token Limits
 - Resource Management
 
 ## Installation
@@ -29,25 +29,23 @@ go get github.com/ztkent/ai-util
 
 ## Available Models
 ### OpenAI Models
-| Model Name | Model Identifier | Cost (IN/OUT per 1M tokens) |
-|------------|------------------|-----------------------------|
-| GPT-3.5 Turbo | `gpt-3.5-turbo` | $0.50 / $1.50 |
-| GPT-4 | `gpt-4` | $30.00 / $60.00 |
-| GPT-4 Turbo | `gpt-4-turbo` | $10.00 / $30.00 |
+| Model Name | Model Identifier |
+|------------|------------------|
+| GPT-3.5 Turbo | `gpt-3.5-turbo` |
+| GPT-4 | `gpt-4` |
+| GPT-4 Turbo | `gpt-4-turbo` |
+| GPT-4o | `gpt-4o` |
+| GPT-4o Mini | `gpt-4o-mini` |
+| O1 Preview | `o1-preview` |
+| O1 Mini | `o1-mini` |
 
 ### Replicate Models
-| Model Name | Model Identifier | Cost (IN/OUT per 1M tokens) |
-|------------|------------------|-----------------------------|
-| Meta Llama 2-70b | `meta/llama-2-70b` | $0.65 / $2.75 |
-| Meta Llama 2-13b | `meta/llama-2-13b` | $0.10 / $0.50 |
-| Meta Llama 2-7b | `meta/llama-2-7b` | $0.05 / $0.25 |
-| Meta Llama 2-13b Chat | `meta/llama-2-13b-chat` | $0.10 / $0.50 |
-| Meta Llama 2-70b Chat | `meta/llama-2-70b-chat` | $0.65 / $2.75 |
-| Meta Llama 2-7b Chat | `meta/llama-2-7b-chat` | $0.05 / $0.25 |
-| Meta Llama 3-8b | `meta/meta-llama-3-8b` | $0.05 / $0.25 |
-| Meta Llama 3-70b | `meta/meta-llama-3-70b` | $0.65 / $2.75 |
-| Meta Llama 3-8b Instruct | `meta/meta-llama-3-8b-instruct` | $0.05 / $0.25 |
-| Meta Llama 3-70b Instruct | `meta/meta-llama-3-70b-instruct` | $0.65 / $2.75 |
-| Mistral 7B | `mistralai/mistral-7b-v0.1` | $0.05 / $0.25 |
-| Mistral 7B Instruct | `mistralai/mistral-7b-instruct-v0.2` | $0.05 / $0.25 |
-| Mixtral 8x7B Instruct | `mistralai/mixtral-8x7b-instruct-v0.1` | $0.30 / $1.00 |
+| Model Name | Model Identifier |
+|------------|------------------|
+| Meta Llama 3-8b | `meta/meta-llama-3-8b` |
+| Meta Llama 3-70b | `meta/meta-llama-3-70b` |
+| Meta Llama 3-8b Instruct | `meta/meta-llama-3-8b-instruct` |
+| Meta Llama 3-70b Instruct | `meta/meta-llama-3-70b-instruct` |
+| Mistral 7B | `mistralai/mistral-7b-v0.1` |
+| Mistral 7B Instruct | `mistralai/mistral-7b-instruct-v0.2` |
+| Mixtral 8x7B Instruct | `mistralai/mixtral-8x7b-instruct-v0.1` |
