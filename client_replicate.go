@@ -9,8 +9,6 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-// TODO: Fix prompt and conversation
-
 type R8Client struct {
 	*replicate.Client
 	Model       string
@@ -54,7 +52,8 @@ func (c *R8Client) SendCompletionRequest(ctx context.Context, conv *Conversation
 	} else if responseChat == nil {
 		return "", fmt.Errorf("Failed to get response from model")
 	}
-	// Check and convert responseChat to a string
+
+	// Read the model response
 	var responseStr string
 	switch v := responseChat.(type) {
 	case string:
@@ -141,7 +140,6 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 			case event := <-streamResChan:
 				if event.Type == "output" {
 					streamingUsed = true
-					// TODO: This should work with [END], but it doesn't..
 					if strings.Contains(event.Data, "assistant\n\n") {
 						lastToken := event.Data[:strings.LastIndex(event.Data, "assistant")]
 						responseChat += lastToken

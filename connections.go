@@ -20,19 +20,14 @@ const (
 )
 
 func NewAIClient(aiProvider string, model string, temperature float64) (Client, error) {
-	// Define a map of default models for each provider
 	defaultModels := map[string]string{
 		"openai":    DefaultOpenAIModel.String(),
 		"replicate": DefaultReplicateModel.String(),
 	}
-
-	// Define a map of connection functions for each provider
 	connectFuncs := map[string]func(string, float32) (Client, error){
 		"openai":    ConnectOpenAI,
 		"replicate": ConnectReplicate,
 	}
-
-	// Check if the provider is valid
 	connectFunc, ok := connectFuncs[aiProvider]
 	if !ok {
 		return nil, fmt.Errorf("Invalid AI provider: %s provided, select either openai, or replicate", aiProvider)
@@ -98,7 +93,6 @@ func CheckConnection(client Client) error {
 
 // Ensure we have the right env variables set for the given source
 func LoadAPIKey(provider Provider) error {
-	// Load the .env file if the var isnt already set
 	loadEnvVar := func(varName string) error {
 		if os.Getenv(varName) == "" {
 			err := godotenv.Load()

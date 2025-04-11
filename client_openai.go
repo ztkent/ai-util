@@ -31,7 +31,7 @@ func (c *OAIClient) SendCompletionRequest(ctx context.Context, conv *Conversatio
 		return "", err
 	}
 
-	// Send the request to the LLM 🤖
+	// Send the request to the model
 	completion, err := c.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 		Model:       c.Model,
 		Messages:    conv.Messages,
