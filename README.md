@@ -1,5 +1,5 @@
 # AI Util
-A framework for building with AI
+ Tools for building with AI.
 
 ## Features 
 - Supported AI Providers:
