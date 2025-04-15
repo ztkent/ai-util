@@ -190,7 +190,7 @@ Utility functions allow adding external content as system messages:
 * `aiutil.AddFileReference(conv *Conversation, path string)`: Reads content from a local file.
 * `aiutil.AddURLReference(conv *Conversation, urlStr string)`: Fetches and extracts text content from a URL.
 
-Content is truncated if it exceeds an internal limit (`maxResourceContentLength`). Resource management must be enabled in the `Conversation`.
+Content is truncated if it exceeds an internal limit (`MaxResourceContentLength`). Resource management must be enabled in the `Conversation`.
 
 ## Available Models
 

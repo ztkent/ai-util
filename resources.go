@@ -13,10 +13,10 @@ import (
 )
 
 const (
-	maxResourceContentLength = 50000 // Limit content size to avoid excessive token usage (adjust as needed)
+	// Limit resource size to avoid excessive token usage.
+	// Resources that exceed this size will be truncated.
+	MaxResourceContentLength = 50000
 )
-
-// ManageResources is removed. Resource detection and parsing should be handled by the application.
 
 // AddResource is a helper to dispatch to specific resource adders.
 func AddResource(conv *Conversation, path string, pathType string) error {
@@ -45,7 +45,7 @@ func AddURLReference(conv *Conversation, urlStr string) error {
 	}
 
 	// Consider adding a timeout to the HTTP client used here
-	client := http.Client{Timeout: 15 * time.Second} // Example timeout
+	client := http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Get(parsedURL.String())
 	if err != nil {
 		return fmt.Errorf("failed to fetch URL %s: %w", urlStr, err)
@@ -57,7 +57,7 @@ func AddURLReference(conv *Conversation, urlStr string) error {
 	}
 
 	// Limit reading to avoid huge downloads
-	limitedReader := io.LimitReader(resp.Body, maxResourceContentLength*2) // Read a bit more to check if truncated
+	limitedReader := io.LimitReader(resp.Body, MaxResourceContentLength*2) // Read a bit more to check if truncated
 
 	// Use goquery to extract text content
 	doc, err := goquery.NewDocumentFromReader(limitedReader)
@@ -68,24 +68,24 @@ func AddURLReference(conv *Conversation, urlStr string) error {
 	// Extract text, trying to be cleaner
 	var pageText strings.Builder
 	doc.Find("body").Each(func(i int, s *goquery.Selection) {
-		cleanedText := strings.Join(strings.Fields(s.Text()), " ") // Simple whitespace normalization
+		cleanedText := strings.Join(strings.Fields(s.Text()), " ")
 		pageText.WriteString(cleanedText)
-		pageText.WriteString(" ") // Add space between elements
+		pageText.WriteString(" ")
 	})
 
 	content := strings.TrimSpace(pageText.String())
 
 	// Truncate if necessary
-	if len(content) > maxResourceContentLength {
-		content = content[:maxResourceContentLength] + "..." // Indicate truncation
-		fmt.Printf("Warning: Truncated content from URL %s to %d characters\n", urlStr, maxResourceContentLength)
+	if len(content) > MaxResourceContentLength {
+		content = content[:MaxResourceContentLength] + "..."
+		fmt.Printf("Warning: Truncated content from URL %s to %d characters\n", urlStr, MaxResourceContentLength)
 	}
 
 	if content == "" {
 		return fmt.Errorf("no text content extracted from URL: %s", urlStr)
 	}
 
-	// Add the reference message (using the conversation's AddReference method)
+	// Add the reference message
 	err = conv.AddReference(urlStr, content)
 	if err != nil {
 		return fmt.Errorf("failed to add URL reference %s to conversation: %w", urlStr, err)
@@ -120,11 +120,8 @@ func AddFileReference(conv *Conversation, path string) error {
 	}
 
 	// Limit file size
-	if fileInfo.Size() > maxResourceContentLength {
-		// Option 1: Error out
-		// return fmt.Errorf("file %s is too large (%d bytes > %d limit)", path, fileInfo.Size(), maxResourceContentLength)
-		// Option 2: Read and truncate (more user-friendly)
-		fmt.Printf("Warning: File %s (%d bytes) exceeds limit (%d bytes), truncating.\n", path, fileInfo.Size(), maxResourceContentLength)
+	if fileInfo.Size() > MaxResourceContentLength {
+		fmt.Printf("Warning: File %s (%d bytes) exceeds limit (%d bytes), truncating.\n", path, fileInfo.Size(), MaxResourceContentLength)
 	}
 
 	file, err := os.Open(path)
@@ -134,15 +131,15 @@ func AddFileReference(conv *Conversation, path string) error {
 	defer file.Close()
 
 	// Read content with limit
-	limitedReader := io.LimitReader(file, maxResourceContentLength)
+	limitedReader := io.LimitReader(file, MaxResourceContentLength)
 	contentBytes, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return fmt.Errorf("failed to read file %s: %w", path, err)
 	}
 
 	content := string(contentBytes)
-	if fileInfo.Size() > maxResourceContentLength {
-		content += "..." // Indicate truncation
+	if fileInfo.Size() > MaxResourceContentLength {
+		content += "..."
 	}
 
 	// Add the reference message
