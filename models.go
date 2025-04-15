@@ -16,6 +16,7 @@ const (
 	GPT4OMini  OpenAIModel = "gpt-4o-mini"
 	O1Preview  OpenAIModel = "o1-preview"
 	O1Mini     OpenAIModel = "o1-mini"
+	GPT41      OpenAIModel = "gpt-4.1"
 	// Open-Source Models via Replicate
 	MetaLlama38b          ReplicateModel = "meta/meta-llama-3-8b"
 	MetaLlama370b         ReplicateModel = "meta/meta-llama-3-70b"
@@ -50,6 +51,8 @@ func IsSupportedOpenAIModel(name string) (OpenAIModel, bool) {
 		return O1Preview, true
 	case O1Mini.String(), "o1-mini":
 		return O1Mini, true
+	case GPT41.String(), "gpt4.1":
+		return GPT41, true
 	default:
 		return "", false
 	}
