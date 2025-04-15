@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	DefaultMaxTokens = 100000 // Default for conversation history size
+	DefaultMaxTokens = 16384
 	DefaultTemp      = 0.7
 )
 
