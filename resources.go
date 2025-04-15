@@ -1,160 +1,155 @@
 package aiutil
 
 import (
-	"bufio"
-	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
-// Determine if the user's input contains a resource command
-// There is usually some limit to the number of tokens
-func ManageResources(conv *Conversation, userInput string) (string, []string, error) {
-	resourcesFound := []string{}
-	if conv == nil {
-		return userInput, resourcesFound, fmt.Errorf("Failed to ManageResources: Conversation is nil")
-	} else if len(userInput) == 0 {
-		return userInput, resourcesFound, nil
-	}
+const (
+	maxResourceContentLength = 50000 // Limit content size to avoid excessive token usage (adjust as needed)
+)
 
-	// Check if there is any input from stdin
-	stdinInput := readFromStdinPipe()
-	if stdinInput != "" {
-		resourcesFound = append(resourcesFound, "stdin:"+stdinInput)
-		conv.AddReference("User Input", stdinInput)
-	}
+// ManageResources is removed. Resource detection and parsing should be handled by the application.
 
-	// Only supporting URL and File resources for now
-	var resourceCommands = []string{"url", "file"}
-	for _, cmd := range resourceCommands {
-		re := regexp.MustCompile(fmt.Sprintf(`\-%s:(.*)`, cmd))
-		matches := re.FindAllStringSubmatch(strings.ToLower(userInput), -1)
-		for _, match := range matches {
-			if len(match) > 1 {
-				resource := strings.TrimSpace(match[1])
-				resourcesFound = append(resourcesFound, cmd+":"+resource)
-				err := AddResource(conv, resource, cmd)
-				if err != nil {
-					return userInput, resourcesFound, err
-				}
-				userInput = strings.Replace(userInput, "-"+cmd+":"+resource, "", -1)
-			}
-		}
-	}
-	return userInput, resourcesFound, nil
-}
-
-// Generate a resource message based on the path and type, return the message to append to the conversation
+// AddResource is a helper to dispatch to specific resource adders.
 func AddResource(conv *Conversation, path string, pathType string) error {
-	if pathType == "url" {
-		err := AddURLReference(conv, path)
-		if err != nil {
-			return err
-		}
-	} else if pathType == "file" {
-		err := AddFileMessage(conv, path)
-		if err != nil {
-			return err
-		}
-	} else {
-		return fmt.Errorf("Invalid resource type: " + pathType)
+	switch strings.ToLower(pathType) {
+	case "url":
+		return AddURLReference(conv, path)
+	case "file":
+		return AddFileReference(conv, path) // Renamed from AddFileMessage
+	default:
+		return fmt.Errorf("unsupported resource type: %s", pathType)
 	}
-	return nil
 }
 
-func AddURLReference(conv *Conversation, path string) error {
-	url, err := url.Parse(path)
-	if err != nil {
-		return err
+// AddURLReference fetches URL content (text) and adds it as a system reference message.
+func AddURLReference(conv *Conversation, urlStr string) error {
+	if conv == nil {
+		return fmt.Errorf("conversation cannot be nil")
+	}
+	if !conv.ResourcesEnabled {
+		return fmt.Errorf("resource management is disabled for this conversation")
 	}
 
-	if url.Scheme == "" || url.Host == "" {
-		return fmt.Errorf("Invalid URL: " + path)
+	parsedURL, err := url.ParseRequestURI(urlStr) // Stricter parsing
+	if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
+		return fmt.Errorf("invalid or unsupported URL scheme: %s", urlStr)
 	}
-	resp, err := http.Get(path)
+
+	// Consider adding a timeout to the HTTP client used here
+	client := http.Client{Timeout: 15 * time.Second} // Example timeout
+	resp, err := client.Get(parsedURL.String())
 	if err != nil {
-		return fmt.Errorf("Failed to fetch URL: " + path)
+		return fmt.Errorf("failed to fetch URL %s: %w", urlStr, err)
 	}
 	defer resp.Body.Close()
 
-	// Handle the page content
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("failed to fetch URL %s: status code %d", urlStr, resp.StatusCode)
+	}
+
+	// Limit reading to avoid huge downloads
+	limitedReader := io.LimitReader(resp.Body, maxResourceContentLength*2) // Read a bit more to check if truncated
+
+	// Use goquery to extract text content
+	doc, err := goquery.NewDocumentFromReader(limitedReader)
 	if err != nil {
-		return fmt.Errorf("Failed to parse HTML: " + path)
+		return fmt.Errorf("failed to parse HTML from %s: %w", urlStr, err)
 	}
-	var pageContent []string
-	seen := make(map[string]struct{})
+
+	// Extract text, trying to be cleaner
+	var pageText strings.Builder
 	doc.Find("body").Each(func(i int, s *goquery.Selection) {
-		text := strings.TrimSpace(s.Text())
-		text = strings.ReplaceAll(text, "\n", "")
-		if _, ok := seen[text]; text != "" && !ok {
-			pageContent = append(pageContent, text)
-			seen[text] = struct{}{}
-		}
+		cleanedText := strings.Join(strings.Fields(s.Text()), " ") // Simple whitespace normalization
+		pageText.WriteString(cleanedText)
+		pageText.WriteString(" ") // Add space between elements
 	})
-	html := strings.Join(pageContent, " ")
 
-	// Add the reference message
-	if html != "" {
-		return conv.AddReference(path, html)
+	content := strings.TrimSpace(pageText.String())
+
+	// Truncate if necessary
+	if len(content) > maxResourceContentLength {
+		content = content[:maxResourceContentLength] + "..." // Indicate truncation
+		fmt.Printf("Warning: Truncated content from URL %s to %d characters\n", urlStr, maxResourceContentLength)
 	}
-	return fmt.Errorf("Skipped adding empty URL reference: " + path)
+
+	if content == "" {
+		return fmt.Errorf("no text content extracted from URL: %s", urlStr)
+	}
+
+	// Add the reference message (using the conversation's AddReference method)
+	err = conv.AddReference(urlStr, content)
+	if err != nil {
+		return fmt.Errorf("failed to add URL reference %s to conversation: %w", urlStr, err)
+	}
+
+	return nil
 }
 
-func AddFileMessage(conv *Conversation, path string) error {
-	resContent := ""
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		fileInfo, err := file.Stat()
-		if err != nil {
-			return err
-		}
-		fileSize := fileInfo.Size()
-		fileContents := make([]byte, fileSize)
-		_, err = file.Read(fileContents)
-		if err != nil {
-			return err
-		}
+// AddFileReference reads file content and adds it as a system reference message.
+func AddFileReference(conv *Conversation, path string) error {
+	if conv == nil {
+		return fmt.Errorf("conversation cannot be nil")
+	}
+	if !conv.ResourcesEnabled {
+		return fmt.Errorf("resource management is disabled for this conversation")
+	}
 
-		resJson, err := json.Marshal(map[string]interface{}{
-			"path":     path,
-			"contents": string(fileContents),
-		})
-		if err != nil {
-			return err
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("file not found: %s", path)
 		}
-		resContent = string(resJson)
-	} else {
-		return fmt.Errorf("Invalid file path: " + path)
+		return fmt.Errorf("failed to stat file %s: %w", path, err)
+	}
+
+	if fileInfo.IsDir() {
+		return fmt.Errorf("path is a directory, not a file: %s", path)
+	}
+
+	if fileInfo.Size() == 0 {
+		return fmt.Errorf("file is empty: %s", path)
+	}
+
+	// Limit file size
+	if fileInfo.Size() > maxResourceContentLength {
+		// Option 1: Error out
+		// return fmt.Errorf("file %s is too large (%d bytes > %d limit)", path, fileInfo.Size(), maxResourceContentLength)
+		// Option 2: Read and truncate (more user-friendly)
+		fmt.Printf("Warning: File %s (%d bytes) exceeds limit (%d bytes), truncating.\n", path, fileInfo.Size(), maxResourceContentLength)
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("failed to open file %s: %w", path, err)
+	}
+	defer file.Close()
+
+	// Read content with limit
+	limitedReader := io.LimitReader(file, maxResourceContentLength)
+	contentBytes, err := io.ReadAll(limitedReader)
+	if err != nil {
+		return fmt.Errorf("failed to read file %s: %w", path, err)
+	}
+
+	content := string(contentBytes)
+	if fileInfo.Size() > maxResourceContentLength {
+		content += "..." // Indicate truncation
 	}
 
 	// Add the reference message
-	if resContent != "" {
-		return conv.AddReference(path, resContent)
+	err = conv.AddReference(path, content)
+	if err != nil {
+		return fmt.Errorf("failed to add file reference %s to conversation: %w", path, err)
 	}
-	return fmt.Errorf("Skipped adding empty file reference: " + path)
-}
 
-func readFromStdinPipe() string {
-	info, _ := os.Stdin.Stat()
-	if (info.Mode() & os.ModeNamedPipe) != 0 {
-		scanner := bufio.NewScanner(os.Stdin)
-		var input strings.Builder
-		for scanner.Scan() {
-			input.WriteString(scanner.Text())
-			input.WriteRune('\n')
-		}
-		return input.String()
-	}
-	return ""
+	return nil
 }

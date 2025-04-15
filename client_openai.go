@@ -3,147 +3,196 @@ package aiutil
 import (
 	"context"
 	"fmt"
+	"io" // Added for stream handling
+	"strings"
 
 	"github.com/sashabaranov/go-openai"
 )
 
-// The OAIClient struct is a wrapper around the OpenAI client
+// OAIClient struct wraps the OpenAI client and holds its configuration.
 type OAIClient struct {
 	*openai.Client
-	Model       string
-	Temperature float32
+	config ClientConfig // Store the configuration
 }
 
-// Waits for the entire response to be returned
-// Adds the users request, and the response to the conversation
+// GetConfig returns the client's configuration.
+func (c *OAIClient) GetConfig() ClientConfig {
+	return c.config
+}
+
+// buildChatCompletionRequest creates the request struct from conversation and config.
+func (c *OAIClient) buildChatCompletionRequest(conv *Conversation) openai.ChatCompletionRequest {
+	req := openai.ChatCompletionRequest{
+		Model:    c.config.Model,
+		Messages: conv.Messages, // Use all messages from conversation
+	}
+	// Apply config options if they are set (non-nil pointers)
+	if c.config.Temperature != nil {
+		req.Temperature = float32(*c.config.Temperature)
+	}
+	if c.config.TopP != nil {
+		req.TopP = float32(*c.config.TopP)
+	}
+	if c.config.MaxTokens != nil {
+		req.MaxTokens = *c.config.MaxTokens
+	}
+	if c.config.PresencePenalty != nil {
+		req.PresencePenalty = float32(*c.config.PresencePenalty)
+	}
+	if c.config.FrequencyPenalty != nil {
+		req.FrequencyPenalty = float32(*c.config.FrequencyPenalty)
+	}
+	if c.config.Seed != nil {
+		req.Seed = c.config.Seed
+	}
+	if c.config.ResponseFormat != "" {
+		req.ResponseFormat = &openai.ChatCompletionResponseFormat{Type: openai.ChatCompletionResponseFormatType(c.config.ResponseFormat)}
+	}
+	if c.config.User != "" {
+		req.User = c.config.User
+	}
+	// Add other parameters like Stop, LogitBias etc. if needed in ClientConfig/Options
+
+	return req
+}
+
+// SendCompletionRequest sends a request and waits for the full response.
 func (c *OAIClient) SendCompletionRequest(ctx context.Context, conv *Conversation, userPrompt string) (string, error) {
-	// Ensure we have a conversation to work with
 	if conv == nil {
-		return "", fmt.Errorf("Failed to SendCompletionRequest: Conversation is nil")
+		return "", fmt.Errorf("conversation cannot be nil")
 	}
 
-	// Add the latest message to the conversation
+	// Add the user's message
 	err := conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Content: userPrompt,
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to append user prompt: %w", err)
 	}
 
-	// Send the request to the model
-	completion, err := c.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-		Model:       c.Model,
-		Messages:    conv.Messages,
-		Temperature: c.Temperature,
-	})
+	// Build and send the request
+	req := c.buildChatCompletionRequest(conv)
+	completion, err := c.CreateChatCompletion(ctx, req)
 	if err != nil {
-		return "", err
-	}
-	responseChat := ""
-	for _, token := range completion.Choices {
-		responseChat = token.Message.Content
+		// Attempt to remove the user message if the request failed before getting a response
+		conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser)
+		return "", fmt.Errorf("failed to create chat completion: %w", err)
 	}
 
-	// Add the response to the conversation
+	// Check for content filter or other reasons for empty choices
+	if len(completion.Choices) == 0 || completion.Choices[0].Message.Content == "" {
+		finishReason := ""
+		if len(completion.Choices) > 0 {
+			finishReason = string(completion.Choices[0].FinishReason)
+		}
+		// Append an empty assistant message? Or return specific error?
+		// Let's return an error indicating no response content.
+		conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser) // Remove user prompt as no valid response pair
+		return "", fmt.Errorf("received empty response from model (finish reason: %s)", finishReason)
+	}
+
+	responseChat := completion.Choices[0].Message.Content
+
+	// Add the assistant's response
 	err = conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: responseChat,
 	})
 	if err != nil {
-		return "", err
+		// This should ideally not happen if token counting is correct, but handle defensively.
+		// Remove the user message as well, as the pair is incomplete.
+		conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser)
+		return "", fmt.Errorf("failed to append assistant response (token limit likely exceeded): %w", err)
 	}
+
 	return responseChat, nil
 }
 
-// Stream the response as it comes in
-// Adds the users request, and the response to the conversation
+// SendStreamRequest sends a request and streams the response.
 func (c *OAIClient) SendStreamRequest(ctx context.Context, conv *Conversation, userPrompt string, responseChan chan string, errChan chan error) {
 	defer close(responseChan)
 	defer close(errChan)
 
-	// Ensure we have a conversation to work with
 	if conv == nil {
-		errChan <- fmt.Errorf("Failed to SendStreamRequest: Conversation is nil")
+		errChan <- fmt.Errorf("conversation cannot be nil")
 		return
 	}
 
-	// Add the latest message to the conversation
+	// Add the user's message
 	err := conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Content: userPrompt,
 	})
 	if err != nil {
-		errChan <- err
+		errChan <- fmt.Errorf("failed to append user prompt: %w", err)
 		return
 	}
 
-	// Stream the request to the LLM 🤖
-	completionStream, err := c.CreateChatCompletionStream(ctx, openai.ChatCompletionRequest{
-		Model:       c.Model,
-		Temperature: c.Temperature,
-		Messages:    conv.Messages,
-	})
+	// Build and send the stream request
+	req := c.buildChatCompletionRequest(conv)
+	stream, err := c.CreateChatCompletionStream(ctx, req)
 	if err != nil {
-		errChan <- err
+		conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser) // Clean up conversation
+		errChan <- fmt.Errorf("failed to create chat completion stream: %w", err)
 		return
 	}
-	responseChat := ""
+	defer stream.Close()
+
+	var responseBuilder strings.Builder // Use strings.Builder for efficiency
+	var finishReason openai.FinishReason
+
 	for {
-		streamData, err := completionStream.Recv()
-		if err != nil {
-			break
+		response, err := stream.Recv()
+		if err == io.EOF {
+			break // Stream finished successfully
 		}
-		for _, token := range streamData.Choices {
-			responseChan <- token.Delta.Content
-			responseChat += token.Delta.Content
+		if err != nil {
+			// Error during stream, try to clean up conversation
+			conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser)
+			errChan <- fmt.Errorf("error receiving stream data: %w", err)
+			return
+		}
+
+		if len(response.Choices) > 0 {
+			delta := response.Choices[0].Delta.Content
+			responseBuilder.WriteString(delta)
+			responseChan <- delta
+			finishReason = response.Choices[0].FinishReason
 		}
 	}
 
-	// Add the response to the conversation, once the stream is closed
+	responseChat := responseBuilder.String()
+
+	// Check if the stream ended for a reason other than "stop" (e.g., length, content_filter)
+	if finishReason != "" && finishReason != openai.FinishReasonStop {
+		// Handle non-stop finish reasons, maybe log or include in error?
+		// For now, proceed to append what was received.
+		fmt.Printf("Warning: OpenAI stream finished with reason: %s\n", finishReason)
+	}
+
+	// Add the complete assistant response to the conversation
 	err = conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: responseChat,
 	})
 	if err != nil {
-		errChan <- err
+		// If appending fails (e.g., token limit with stream), send error.
+		// The user message is already added, but the pair is incomplete.
+		errChan <- fmt.Errorf("failed to append assistant response post-stream (token limit likely exceeded): %w", err)
 		return
 	}
-	return
 }
 
-func (c *OAIClient) GetTemperature() float32 {
-	return c.Temperature
-}
-
-func (c *OAIClient) SetTemperature(temp float32) {
-	if temp >= 0.0 && temp <= 1.0 {
-		c.Temperature = temp
-	}
-}
-
-func (c *OAIClient) GetModel() string {
-	return c.Model
-}
-
-func (c *OAIClient) SetModel(model string) {
-	if _, ok := IsSupportedOpenAIModel(model); ok {
-		c.Model = model
-	}
-}
-
-func (c *OAIClient) SetWebhook(url string, events []string) error {
-	return fmt.Errorf("Webhooks are not supported for OpenAI")
-}
-
+// ListModels lists available OpenAI models.
 func (c *OAIClient) ListModels(ctx context.Context) ([]string, error) {
 	providerModels, err := c.Client.ListModels(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list OpenAI models: %w", err)
 	}
-	models := make([]string, 0)
-	for _, model := range providerModels.Models {
-		models = append(models, model.ID)
+	models := make([]string, len(providerModels.Models))
+	for i, model := range providerModels.Models {
+		models[i] = model.ID
 	}
 	return models, nil
 }
