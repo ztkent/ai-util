@@ -15,6 +15,7 @@ import (
 
 const (
 	DefaultMaxTokens = 100000 // Default for conversation history size
+	DefaultTemp      = 0.7
 )
 
 // NewAIClient creates a new AI client based on the provided options.
@@ -105,8 +106,6 @@ func ConnectReplicate(config *ClientConfig) (Client, error) {
 	if config.BaseURL != "" {
 		opts = append(opts, replicate.WithBaseURL(config.BaseURL))
 	}
-	// if config.HTTPClient != nil { // Removed comment about replicate-go http client support
-	// }
 
 	r8, err := replicate.NewClient(opts...)
 	if err != nil {
@@ -138,6 +137,3 @@ func CheckConnection(client Client) error {
 	}
 	return nil
 }
-
-// LoadAPIKey is deprecated, API keys are handled by NewAIClient.
-// func LoadAPIKey(provider Provider) error { ... }
