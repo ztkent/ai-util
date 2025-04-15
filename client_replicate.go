@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	// Added for stream timeout
 	"github.com/replicate/replicate-go"
 	"github.com/sashabaranov/go-openai"
 )
@@ -26,7 +25,6 @@ func (c *R8Client) GetConfig() ClientConfig {
 func (c *R8Client) buildPredictionInput(conv *Conversation, userPrompt string) replicate.PredictionInput {
 	input := replicate.PredictionInput{}
 
-	// Map common parameters from ClientConfig
 	if c.config.Temperature != nil {
 		input["temperature"] = *c.config.Temperature
 	}
@@ -40,7 +38,6 @@ func (c *R8Client) buildPredictionInput(conv *Conversation, userPrompt string) r
 		input["seed"] = *c.config.Seed
 	}
 	if c.config.MaxTokens != nil {
-		// Replicate often uses 'max_new_tokens' or 'max_length'
 		if _, exists := c.config.ReplicateInput["max_new_tokens"]; !exists {
 			if _, exists_len := c.config.ReplicateInput["max_length"]; !exists_len {
 				input["max_new_tokens"] = *c.config.MaxTokens
@@ -48,19 +45,16 @@ func (c *R8Client) buildPredictionInput(conv *Conversation, userPrompt string) r
 		}
 	}
 
-	// Merge explicitly provided ReplicateInput, potentially overriding mapped common params
 	if c.config.ReplicateInput != nil {
 		for k, v := range c.config.ReplicateInput {
 			input[k] = v
 		}
 	}
 
-	// Use the userPrompt directly
 	input["prompt"] = userPrompt
 
 	// Extract system prompt if available (first message)
 	if len(conv.Messages) > 0 && conv.Messages[0].Role == openai.ChatMessageRoleSystem {
-		// Check if 'system_prompt' is already set in ReplicateInput, if so, respect it
 		if _, exists := input["system_prompt"]; !exists {
 			input["system_prompt"] = conv.Messages[0].Content
 		}
@@ -74,7 +68,6 @@ func (c *R8Client) SendCompletionRequest(ctx context.Context, conv *Conversation
 		return "", fmt.Errorf("conversation cannot be nil")
 	}
 
-	// Add user message
 	err := conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Content: userPrompt,
@@ -97,7 +90,6 @@ func (c *R8Client) SendCompletionRequest(ctx context.Context, conv *Conversation
 		return "", fmt.Errorf("replicate run returned nil output for model %s", c.config.Model)
 	}
 
-	// Process output (common pattern: slice of strings)
 	var responseStr string
 	switch v := output.(type) {
 	case string:
@@ -115,7 +107,6 @@ func (c *R8Client) SendCompletionRequest(ctx context.Context, conv *Conversation
 		return "", fmt.Errorf("replicate run returned unexpected output type (%T) for model %s", output, c.config.Model)
 	}
 
-	// Add assistant response
 	err = conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: responseStr,
@@ -137,7 +128,6 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 		return
 	}
 
-	// Add user message
 	err := conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Content: userPrompt,
@@ -148,7 +138,6 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 	}
 	input := c.buildPredictionInput(conv, userPrompt)
 
-	// Extract model owner, name, and version
 	modelParts := strings.Split(c.config.Model, ":")
 	if len(modelParts) != 2 {
 		conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser)
@@ -157,7 +146,6 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 	}
 	version := modelParts[1]
 
-	// Create prediction with stream enabled
 	prediction, err := c.CreatePrediction(ctx, version, input, c.config.Webhook, true)
 	if err != nil {
 		conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser)
@@ -165,19 +153,17 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 		return
 	}
 
-	// Stream the prediction
 	var responseBuilder strings.Builder
-	streamErrChan := make(chan error, 1) // Buffered channel for stream error
+	streamErrChan := make(chan error, 1)
 	streamEventChan, streamErrFromChan := c.Client.StreamPrediction(ctx, prediction)
 
 	go func() {
 		defer close(streamErrChan)
-		// Use the channels returned by StreamPrediction
 		for {
 			select {
 			case event, ok := <-streamEventChan:
 				if !ok {
-					streamEventChan = nil // Channel closed
+					streamEventChan = nil
 				} else {
 					switch event.Type {
 					case "output":
@@ -185,37 +171,34 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 						responseChan <- event.Data
 					case "error":
 						streamErrChan <- fmt.Errorf("replicate stream error: %s", event.Data)
-						return // Exit goroutine on stream error event
+						return
 					case "logs":
-						fmt.Println("Stream Log:", event.Data)
+						// fmt.Println("Stream Log:", event.Data) // Keep this commented out for potential debugging
 					case "done":
 					}
 				}
 			case err, ok := <-streamErrFromChan:
 				if !ok {
-					streamErrFromChan = nil // Channel closed
+					streamErrFromChan = nil
 				} else if err != nil {
-					// Capture error from the stream error channel
 					streamErrChan <- fmt.Errorf("replicate stream function failed: %w", err)
-					return // Exit goroutine on channel error
+					return
 				}
 			case <-ctx.Done():
 				streamErrChan <- fmt.Errorf("context cancelled during stream processing: %w", ctx.Err())
-				return // Exit goroutine on context cancellation
+				return
 			}
-			// Exit loop when both channels are closed
 			if streamEventChan == nil && streamErrFromChan == nil {
 				break
 			}
 		}
 	}()
 
-	// Wait for the stream goroutine to finish or timeout
 	select {
 	case err := <-streamErrChan:
 		if err != nil {
 			conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser)
-			errChan <- err // Propagate stream error
+			errChan <- err
 			return
 		}
 	case <-ctx.Done():
@@ -228,7 +211,6 @@ func (c *R8Client) SendStreamRequest(ctx context.Context, conv *Conversation, us
 		return
 	}
 
-	// Add the complete assistant response
 	responseChat := responseBuilder.String()
 	err = conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
@@ -249,10 +231,10 @@ func (c *R8Client) ListModels(ctx context.Context) ([]string, error) {
 
 	models := make([]string, 0, len(modelPage.Results))
 	for _, model := range modelPage.Results {
-		if model.LatestVersion != nil { // Ensure there's a version
+		if model.LatestVersion != nil {
 			models = append(models, model.Owner+"/"+model.Name+":"+model.LatestVersion.ID)
 		} else {
-			models = append(models, model.Owner+"/"+model.Name) // Model without a version?
+			models = append(models, model.Owner+"/"+model.Name)
 		}
 	}
 	return models, nil
@@ -262,7 +244,7 @@ func (c *R8Client) ListModels(ctx context.Context) ([]string, error) {
 // and updates the model string in the client's config copy.
 func (c *R8Client) SetModelWithVersion(ctx context.Context) error {
 	if strings.Contains(c.config.Model, ":") {
-		return nil // Version already specified
+		return nil
 	}
 
 	modelParts := strings.Split(c.config.Model, "/")
@@ -280,8 +262,7 @@ func (c *R8Client) SetModelWithVersion(ctx context.Context) error {
 		return fmt.Errorf("no latest version found for replicate model %s/%s", owner, name)
 	}
 
-	// Update the config's model string
 	c.config.Model = modelDetails.Owner + "/" + modelDetails.Name + ":" + modelDetails.LatestVersion.ID
-	fmt.Printf("Resolved Replicate model %s/%s to version %s\n", owner, name, modelDetails.LatestVersion.ID) // Info log
+	fmt.Printf("Resolved Replicate model %s/%s to version %s\n", owner, name, modelDetails.LatestVersion.ID)
 	return nil
 }

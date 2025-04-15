@@ -3,7 +3,7 @@ package aiutil
 import (
 	"context"
 	"fmt"
-	"io" // Added for stream handling
+	"io"
 	"strings"
 
 	"github.com/sashabaranov/go-openai"
@@ -12,7 +12,7 @@ import (
 // OAIClient struct wraps the OpenAI client and holds its configuration.
 type OAIClient struct {
 	*openai.Client
-	config ClientConfig // Store the configuration
+	config ClientConfig
 }
 
 // GetConfig returns the client's configuration.
@@ -24,9 +24,8 @@ func (c *OAIClient) GetConfig() ClientConfig {
 func (c *OAIClient) buildChatCompletionRequest(conv *Conversation) openai.ChatCompletionRequest {
 	req := openai.ChatCompletionRequest{
 		Model:    c.config.Model,
-		Messages: conv.Messages, // Use all messages from conversation
+		Messages: conv.Messages,
 	}
-	// Apply config options if they are set (non-nil pointers)
 	if c.config.Temperature != nil {
 		req.Temperature = float32(*c.config.Temperature)
 	}
@@ -51,7 +50,6 @@ func (c *OAIClient) buildChatCompletionRequest(conv *Conversation) openai.ChatCo
 	if c.config.User != "" {
 		req.User = c.config.User
 	}
-	// Add other parameters like Stop, LogitBias etc. if needed in ClientConfig/Options
 
 	return req
 }
@@ -62,7 +60,6 @@ func (c *OAIClient) SendCompletionRequest(ctx context.Context, conv *Conversatio
 		return "", fmt.Errorf("conversation cannot be nil")
 	}
 
-	// Add the user's message
 	err := conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Content: userPrompt,
@@ -71,37 +68,29 @@ func (c *OAIClient) SendCompletionRequest(ctx context.Context, conv *Conversatio
 		return "", fmt.Errorf("failed to append user prompt: %w", err)
 	}
 
-	// Build and send the request
 	req := c.buildChatCompletionRequest(conv)
 	completion, err := c.CreateChatCompletion(ctx, req)
 	if err != nil {
-		// Attempt to remove the user message if the request failed before getting a response
 		conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser)
 		return "", fmt.Errorf("failed to create chat completion: %w", err)
 	}
 
-	// Check for content filter or other reasons for empty choices
 	if len(completion.Choices) == 0 || completion.Choices[0].Message.Content == "" {
 		finishReason := ""
 		if len(completion.Choices) > 0 {
 			finishReason = string(completion.Choices[0].FinishReason)
 		}
-		// Append an empty assistant message? Or return specific error?
-		// Let's return an error indicating no response content.
-		conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser) // Remove user prompt as no valid response pair
+		conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser)
 		return "", fmt.Errorf("received empty response from model (finish reason: %s)", finishReason)
 	}
 
 	responseChat := completion.Choices[0].Message.Content
 
-	// Add the assistant's response
 	err = conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: responseChat,
 	})
 	if err != nil {
-		// This should ideally not happen if token counting is correct, but handle defensively.
-		// Remove the user message as well, as the pair is incomplete.
 		conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser)
 		return "", fmt.Errorf("failed to append assistant response (token limit likely exceeded): %w", err)
 	}
@@ -119,7 +108,6 @@ func (c *OAIClient) SendStreamRequest(ctx context.Context, conv *Conversation, u
 		return
 	}
 
-	// Add the user's message
 	err := conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Content: userPrompt,
@@ -129,26 +117,24 @@ func (c *OAIClient) SendStreamRequest(ctx context.Context, conv *Conversation, u
 		return
 	}
 
-	// Build and send the stream request
 	req := c.buildChatCompletionRequest(conv)
 	stream, err := c.CreateChatCompletionStream(ctx, req)
 	if err != nil {
-		conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser) // Clean up conversation
+		conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser)
 		errChan <- fmt.Errorf("failed to create chat completion stream: %w", err)
 		return
 	}
 	defer stream.Close()
 
-	var responseBuilder strings.Builder // Use strings.Builder for efficiency
+	var responseBuilder strings.Builder
 	var finishReason openai.FinishReason
 
 	for {
 		response, err := stream.Recv()
 		if err == io.EOF {
-			break // Stream finished successfully
+			break
 		}
 		if err != nil {
-			// Error during stream, try to clean up conversation
 			conv.RemoveLastMessageIfRole(openai.ChatMessageRoleUser)
 			errChan <- fmt.Errorf("error receiving stream data: %w", err)
 			return
@@ -164,21 +150,15 @@ func (c *OAIClient) SendStreamRequest(ctx context.Context, conv *Conversation, u
 
 	responseChat := responseBuilder.String()
 
-	// Check if the stream ended for a reason other than "stop" (e.g., length, content_filter)
 	if finishReason != "" && finishReason != openai.FinishReasonStop {
-		// Handle non-stop finish reasons, maybe log or include in error?
-		// For now, proceed to append what was received.
 		fmt.Printf("Warning: OpenAI stream finished with reason: %s\n", finishReason)
 	}
 
-	// Add the complete assistant response to the conversation
 	err = conv.Append(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: responseChat,
 	})
 	if err != nil {
-		// If appending fails (e.g., token limit with stream), send error.
-		// The user message is already added, but the pair is incomplete.
 		errChan <- fmt.Errorf("failed to append assistant response post-stream (token limit likely exceeded): %w", err)
 		return
 	}

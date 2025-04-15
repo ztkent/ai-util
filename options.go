@@ -15,16 +15,14 @@ type ClientConfig struct {
 	Temperature *float64
 	TopP        *float64
 	Seed        *int
-	MaxTokens   *int
+	MaxTokens   *int // Max response tokens
 	HTTPClient  *http.Client
-
 	// OpenAI specific
 	OrgID            string
 	PresencePenalty  *float64
 	FrequencyPenalty *float64
 	ResponseFormat   string // e.g., "json_object"
 	User             string
-
 	// Replicate specific
 	TopK           *int
 	ReplicateInput map[string]interface{}
@@ -161,7 +159,7 @@ func WithReplicateWebhook(url string, events []replicate.WebhookEventType) Optio
 				Events: events,
 			}
 		} else {
-			c.Webhook = nil // Clear webhook if invalid config provided
+			c.Webhook = nil
 		}
 	}
 }

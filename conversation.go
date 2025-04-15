@@ -27,22 +27,14 @@ func NewConversation(systemPrompt string, maxTokens int, resourcesEnabled bool) 
 		Role:    openai.ChatMessageRoleSystem,
 		Content: systemPrompt,
 	}
-	// Estimate initial system prompt tokens
 	initialTokens, err := EstimateMessageTokens(systemMessage)
 	if err != nil {
-		// Handle error? Log? For now, assume 0 if estimation fails.
-		fmt.Printf("Warning: Failed to estimate initial system prompt tokens: %v\n", err)
 		initialTokens = 0
-	}
-	if initialTokens > maxTokens {
-		// System prompt itself exceeds limit, maybe return error or truncated conversation?
-		// For now, create it anyway but it will fail on first Append.
-		fmt.Printf("Warning: System prompt token count (%d) exceeds MaxTokens (%d)\n", initialTokens, maxTokens)
 	}
 
 	conv := &Conversation{
 		Messages:         []openai.ChatCompletionMessage{systemMessage},
-		TokenCount:       initialTokens, // Initialize token count
+		TokenCount:       initialTokens,
 		MaxTokens:        maxTokens,
 		ResourcesEnabled: resourcesEnabled,
 		id:               uuid.New(),
@@ -61,9 +53,8 @@ func (c *Conversation) Append(m openai.ChatCompletionMessage) error {
 		return fmt.Errorf("failed to estimate message tokens: %w", err)
 	}
 
-	// Check if adding this message exceeds the limit
 	if c.TokenCount+tokCount > c.MaxTokens {
-		// TODO: Implement context pruning strategy here if desired (e.g., remove oldest messages)
+		// Context pruning strategy could be implemented here if desired
 		return fmt.Errorf("max conversation tokens exceeded: adding %d tokens to current %d would exceed limit %d", tokCount, c.TokenCount, c.MaxTokens)
 	}
 
@@ -81,16 +72,12 @@ func (c *Conversation) RemoveLastMessageIfRole(role string) {
 	if len(c.Messages) > 0 {
 		lastMsg := c.Messages[len(c.Messages)-1]
 		if lastMsg.Role == role {
-			// Re-estimate tokens of the removed message to subtract
 			tokCount, err := EstimateMessageTokens(lastMsg)
-			if err == nil { // Only adjust count if estimation succeeds
+			if err == nil {
 				c.TokenCount -= tokCount
-				if c.TokenCount < 0 { // Avoid negative count
+				if c.TokenCount < 0 {
 					c.TokenCount = 0
 				}
-			} else {
-				fmt.Printf("Warning: Failed to estimate tokens for removed message: %v\n", err)
-				// Token count might become inaccurate here. Consider recalculating all messages.
 			}
 			c.Messages = c.Messages[:len(c.Messages)-1]
 		}
@@ -99,7 +86,6 @@ func (c *Conversation) RemoveLastMessageIfRole(role string) {
 
 // SeedConversation adds example request/response pairs.
 func (c *Conversation) SeedConversation(requestResponseMap map[string]string) error {
-	// No lock needed here as Append handles locking internally
 	for user, response := range requestResponseMap {
 		err := c.Append(openai.ChatCompletionMessage{
 			Role:    openai.ChatMessageRoleUser,
@@ -113,7 +99,6 @@ func (c *Conversation) SeedConversation(requestResponseMap map[string]string) er
 			Content: response,
 		})
 		if err != nil {
-			// Attempt to clean up the user message added just before
 			c.RemoveLastMessageIfRole(openai.ChatMessageRoleUser)
 			return fmt.Errorf("failed to seed assistant response for user message (%s): %w", user, err)
 		}
@@ -123,20 +108,14 @@ func (c *Conversation) SeedConversation(requestResponseMap map[string]string) er
 
 // AddReference adds a system message containing reference material.
 func (c *Conversation) AddReference(id string, content string) error {
-	// Build the reference message content
-	// Using MultiContent might not be universally supported or interpreted correctly by all models.
-	// A simpler approach might be a single text block.
-	// Let's switch to a simpler text format for broader compatibility.
 	refContent := fmt.Sprintf("<Reference id=\"%s\">\n%s\n</Reference>", id, content)
 
-	// Consider adding a specific Name or Role if needed, but System role is often appropriate.
 	message := openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleSystem, // Or maybe a custom role/name if models support it
+		Role:    openai.ChatMessageRoleSystem,
 		Content: refContent,
 		// Name: "ReferenceMaterial", // Optional name
 	}
 
-	// Append handles locking and token counting
 	err := c.Append(message)
 	if err != nil {
 		return fmt.Errorf("failed to add reference '%s': %w", id, err)
