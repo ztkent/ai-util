@@ -11,8 +11,8 @@ import (
 type Conversation struct {
 	Messages         []openai.ChatCompletionMessage
 	TokenCount       int
-	MaxTokens        int  // Max tokens for the *conversation history*, not response generation
-	ResourcesEnabled bool // Keep for now, might relate to how references are handled
+	MaxTokens        int
+	ResourcesEnabled bool
 	id               uuid.UUID
 	*sync.Mutex
 }
