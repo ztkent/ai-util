@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	DefaultMaxTokens = 16384
+	DefaultMaxTokens = 32768
 	DefaultTemp      = 0.7
 )
 
@@ -67,7 +67,7 @@ func NewAIClient(opts ...Option) (Client, error) {
 // ConnectOpenAI establishes a connection with the OpenAI API.
 func ConnectOpenAI(config *ClientConfig) (Client, error) {
 	if config.Model == "" {
-		config.Model = GPT4OMini.String()
+		config.Model = GPT41.String()
 	} else if _, ok := IsSupportedOpenAIModel(config.Model); !ok {
 		return nil, fmt.Errorf("unsupported OpenAI model specified: %s", config.Model)
 	}
