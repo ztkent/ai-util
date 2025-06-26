@@ -152,7 +152,6 @@ if err != nil {
 }
 ```
 
-
 ## Available Models
 
 ### OpenAI Models
