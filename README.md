@@ -117,7 +117,45 @@ Or explicitly provided via the builder pattern.
 | Mistral 7B Instruct | `mistralai/mistral-7b-instruct-v0.2` |
 | Mixtral 8x7B Instruct | `mistralai/mixtral-8x7b-instruct-v0.1` |
 
-## Streaming
+## Examples
+
+```go
+// Basic completion request
+resp, err := client.Complete(ctx, &types.CompletionRequest{
+    Messages: []*types.Message{
+        types.NewTextMessage(types.RoleUser, "What is the capital of France?"),
+    },
+    Model:       "gpt-4o",
+    MaxTokens:   100,
+    Temperature: 0.7,
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Response: %s\n", resp.Message.TextData)
+fmt.Printf("Usage: %+v\n", resp.Usage)
+```
+
+```go
+// Multi-message conversation
+resp, err := client.Complete(ctx, &types.CompletionRequest{
+    Messages: []*types.Message{
+        types.NewTextMessage(types.RoleSystem, "You are a helpful assistant."),
+        types.NewTextMessage(types.RoleUser, "Explain quantum computing in simple terms."),
+    },
+    Model:       "gpt-4o",
+    MaxTokens:   500,
+    Temperature: 0.5,
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Assistant: %s\n", resp.Message.TextData)
+```
+
+### Streaming
 
 ```go
 // Stream responses
@@ -137,7 +175,7 @@ if err != nil {
 }
 ```
 
-## Error Handling
+### Error Handling
 
 The API provides structured error handling:
 
