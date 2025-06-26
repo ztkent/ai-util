@@ -1,3 +1,5 @@
+<a href="https://github.com/ztkent/ai-util/tags"><img src="https://img.shields.io/github/v/tag/ztkent/ai-util.svg" alt="Latest Release"></a>
+
 # AI Util
 
 Tools for building with AI.
