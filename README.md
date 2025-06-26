@@ -15,6 +15,9 @@ Tools for building with AI.
 - Conversation Management:
   - Manage message history and token counts with auto-truncation
   - Support for system prompts and role-based messaging
+- Tool Calling:
+  - Invoke backend tools and APIs from within conversations
+  - Available only for supported models.
 
 ## Installation
 
@@ -62,62 +65,22 @@ API keys are loaded from environment variables by default:
 
 Or explicitly provided via the builder pattern.
 
-## Available Models
-
-### OpenAI Models
-
-| Model Name | Model Identifier |
-|------------|------------------|
-| GPT-4o | `gpt-4o` |
-| GPT-4o Mini | `gpt-4o-mini` |
-| GPT-4 Turbo | `gpt-4-turbo` |
-| GPT-4 | `gpt-4` |
-| GPT-3.5 Turbo | `gpt-3.5-turbo` |
-| O1 Preview | `o1-preview` |
-| O1 Mini | `o1-mini` |
-
-### Google AI Models
-
-| Model Name | Model Identifier | Capabilities |
-|------------|------------------|--------------|
-| **Gemini 2.5 Series (Latest)** | | |
-| Gemini 2.5 Pro | `gemini-2.5-pro` | Chat, Streaming, Tools, Vision, Audio, Video, Thinking |
-| Gemini 2.5 Flash | `gemini-2.5-flash` | Chat, Streaming, Tools, Vision, Audio, Video, Thinking |
-| Gemini 2.5 Flash-Lite | `gemini-2.5-flash-lite` | Chat, Streaming, Tools, Vision, Audio, Video |
-| Gemini 2.5 Flash Preview TTS | `gemini-2.5-flash-preview-tts` | Text-to-Speech |
-| Gemini 2.5 Pro Preview TTS | `gemini-2.5-pro-preview-tts` | Text-to-Speech |
-| **Gemini 2.0 Series** | | |
-| Gemini 2.0 Flash | `gemini-2.0-flash` | Chat, Streaming, Tools, Vision, Audio, Video |
-| Gemini 2.0 Flash Preview Image Gen | `gemini-2.0-flash-preview-image-generation` | Chat, Image Generation, Vision, Audio, Video |
-| Gemini 2.0 Flash-Lite | `gemini-2.0-flash-lite` | Chat, Streaming, Vision, Audio, Video |
-| **Gemini 1.5 Series (Stable)** | | |
-| Gemini 1.5 Pro | `gemini-1.5-pro` | Chat, Streaming, Tools, Vision, Audio, Video |
-| Gemini 1.5 Flash | `gemini-1.5-flash` | Chat, Streaming, Vision, Audio, Video |
-| Gemini 1.5 Flash-8B | `gemini-1.5-flash-8b` | Chat, Streaming, Vision, Audio, Video |
-| **Live Interaction Models** | | |
-| Gemini 2.5 Flash Live | `gemini-2.5-flash-live` | Live Audio/Video, Streaming |
-| Gemini 2.0 Flash Live | `gemini-2.0-flash-live` | Live Audio/Video, Streaming |
-| **Embedding Models** | | |
-| Text Embedding 004 | `text-embedding-004` | Text Embeddings |
-| Gemini Embedding Experimental | `gemini-embedding-exp` | Text Embeddings |
-| **Generation Models** | | |
-| Imagen 4 | `imagen-4.0-generate-preview` | Image Generation |
-| Imagen 3 | `imagen-3.0-generate-002` | Image Generation |
-| Veo 2 | `veo-2.0-generate-001` | Video Generation |
-
-### Replicate Models
-
-| Model Name | Model Identifier |
-|------------|------------------|
-| Meta Llama 3.1 8B Instruct | `meta/meta-llama-3.1-8b-instruct` |
-| Meta Llama 3.1 70B Instruct | `meta/meta-llama-3.1-70b-instruct` |
-| Meta Llama 3.1 405B Instruct | `meta/meta-llama-3.1-405b-instruct` |
-| Meta Llama 3 8B Instruct | `meta/meta-llama-3-8b-instruct` |
-| Meta Llama 3 70B Instruct | `meta/meta-llama-3-70b-instruct` |
-| Mistral 7B Instruct | `mistralai/mistral-7b-instruct-v0.2` |
-| Mixtral 8x7B Instruct | `mistralai/mixtral-8x7b-instruct-v0.1` |
-
 ## Examples
+
+The repository includes examples demonstrating features for each supported provider.
+
+- OpenAI Provider Example (`examples/openai/openai_provider_example.go`)
+- Google AI Provider Example (`examples/google/google_provider_example.go`)
+
+- Features:
+  - Basic chat completions
+  - Streaming responses
+  - Tool/function calling
+  - Token estimation
+  - Model listing
+  - Error handling
+
+## Usage
 
 ```go
 // Basic completion request
@@ -188,3 +151,59 @@ if err != nil {
     }
 }
 ```
+
+
+## Available Models
+
+### OpenAI Models
+
+| Model Name | Model Identifier |
+|------------|------------------|
+| GPT-4o | `gpt-4o` |
+| GPT-4o Mini | `gpt-4o-mini` |
+| GPT-4 Turbo | `gpt-4-turbo` |
+| GPT-4 | `gpt-4` |
+| GPT-3.5 Turbo | `gpt-3.5-turbo` |
+| O1 Preview | `o1-preview` |
+| O1 Mini | `o1-mini` |
+
+### Google AI Models
+
+| Model Name | Model Identifier | Capabilities |
+|------------|------------------|--------------|
+| **Gemini 2.5 Series (Latest)** | | |
+| Gemini 2.5 Pro | `gemini-2.5-pro` | Chat, Streaming, Tools, Vision, Audio, Video, Thinking |
+| Gemini 2.5 Flash | `gemini-2.5-flash` | Chat, Streaming, Tools, Vision, Audio, Video, Thinking |
+| Gemini 2.5 Flash-Lite | `gemini-2.5-flash-lite` | Chat, Streaming, Tools, Vision, Audio, Video |
+| Gemini 2.5 Flash Preview TTS | `gemini-2.5-flash-preview-tts` | Text-to-Speech |
+| Gemini 2.5 Pro Preview TTS | `gemini-2.5-pro-preview-tts` | Text-to-Speech |
+| **Gemini 2.0 Series** | | |
+| Gemini 2.0 Flash | `gemini-2.0-flash` | Chat, Streaming, Tools, Vision, Audio, Video |
+| Gemini 2.0 Flash Preview Image Gen | `gemini-2.0-flash-preview-image-generation` | Chat, Image Generation, Vision, Audio, Video |
+| Gemini 2.0 Flash-Lite | `gemini-2.0-flash-lite` | Chat, Streaming, Vision, Audio, Video |
+| **Gemini 1.5 Series (Stable)** | | |
+| Gemini 1.5 Pro | `gemini-1.5-pro` | Chat, Streaming, Tools, Vision, Audio, Video |
+| Gemini 1.5 Flash | `gemini-1.5-flash` | Chat, Streaming, Vision, Audio, Video |
+| Gemini 1.5 Flash-8B | `gemini-1.5-flash-8b` | Chat, Streaming, Vision, Audio, Video |
+| **Live Interaction Models** | | |
+| Gemini 2.5 Flash Live | `gemini-2.5-flash-live` | Live Audio/Video, Streaming |
+| Gemini 2.0 Flash Live | `gemini-2.0-flash-live` | Live Audio/Video, Streaming |
+| **Embedding Models** | | |
+| Text Embedding 004 | `text-embedding-004` | Text Embeddings |
+| Gemini Embedding Experimental | `gemini-embedding-exp` | Text Embeddings |
+| **Generation Models** | | |
+| Imagen 4 | `imagen-4.0-generate-preview` | Image Generation |
+| Imagen 3 | `imagen-3.0-generate-002` | Image Generation |
+| Veo 2 | `veo-2.0-generate-001` | Video Generation |
+
+### Replicate Models
+
+| Model Name | Model Identifier |
+|------------|------------------|
+| Meta Llama 3.1 8B Instruct | `meta/meta-llama-3.1-8b-instruct` |
+| Meta Llama 3.1 70B Instruct | `meta/meta-llama-3.1-70b-instruct` |
+| Meta Llama 3.1 405B Instruct | `meta/meta-llama-3.1-405b-instruct` |
+| Meta Llama 3 8B Instruct | `meta/meta-llama-3-8b-instruct` |
+| Meta Llama 3 70B Instruct | `meta/meta-llama-3-70b-instruct` |
+| Mistral 7B Instruct | `mistralai/mistral-7b-instruct-v0.2` |
+| Mixtral 8x7B Instruct | `mistralai/mixtral-8x7b-instruct-v0.1` |

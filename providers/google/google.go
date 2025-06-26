@@ -2,6 +2,7 @@ package google
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -355,7 +356,7 @@ func (p *Provider) Complete(ctx context.Context, req *types.CompletionRequest) (
 
 	// Create generation config
 	var config *genai.GenerateContentConfig
-	if req.MaxTokens > 0 || req.Temperature > 0 || req.TopP > 0 || req.TopK > 0 {
+	if req.MaxTokens > 0 || req.Temperature > 0 || req.TopP > 0 || req.TopK > 0 || len(req.Tools) > 0 {
 		config = &genai.GenerateContentConfig{}
 
 		// Set generation parameters
@@ -373,6 +374,22 @@ func (p *Provider) Complete(ctx context.Context, req *types.CompletionRequest) (
 		if req.TopK > 0 {
 			topK := float32(req.TopK)
 			config.TopK = &topK
+		}
+
+		// Add tools if present
+		if len(req.Tools) > 0 {
+			tools := make([]*genai.Tool, len(req.Tools))
+			for i, tool := range req.Tools {
+				funcDecl := &genai.FunctionDeclaration{
+					Name:        tool.Function.Name,
+					Description: tool.Function.Description,
+					Parameters:  convertJSONSchemaToGeminiSchema(tool.Function.Parameters),
+				}
+				tools[i] = &genai.Tool{
+					FunctionDeclarations: []*genai.FunctionDeclaration{funcDecl},
+				}
+			}
+			config.Tools = tools
 		}
 
 		// Disable thinking for faster responses by default
@@ -404,6 +421,20 @@ func (p *Provider) Complete(ctx context.Context, req *types.CompletionRequest) (
 	// Extract response text
 	responseText := result.Text()
 
+	// Create the message
+	message := &types.Message{
+		Role:     types.RoleAssistant,
+		TextData: responseText,
+	}
+
+	// Handle tool calls if present
+	if len(result.Candidates) > 0 {
+		toolCalls := p.handleToolCalls(result.Candidates)
+		if len(toolCalls) > 0 {
+			message.ToolCalls = toolCalls
+		}
+	}
+
 	// Convert usage information if available
 	var usage *types.Usage
 	if result.UsageMetadata != nil {
@@ -427,13 +458,10 @@ func (p *Provider) Complete(ctx context.Context, req *types.CompletionRequest) (
 	}
 
 	return &types.CompletionResponse{
-		ID:       responseID,
-		Model:    req.Model,
-		Provider: "google",
-		Message: &types.Message{
-			Role:     types.RoleAssistant,
-			TextData: responseText,
-		},
+		ID:           responseID,
+		Model:        req.Model,
+		Provider:     "google",
+		Message:      message,
 		FinishReason: finishReason,
 		Usage:        usage,
 	}, nil
@@ -473,7 +501,7 @@ func (p *Provider) Stream(ctx context.Context, req *types.CompletionRequest, cal
 
 	// Create generation config
 	var config *genai.GenerateContentConfig
-	if req.MaxTokens > 0 || req.Temperature > 0 || req.TopP > 0 || req.TopK > 0 {
+	if req.MaxTokens > 0 || req.Temperature > 0 || req.TopP > 0 || req.TopK > 0 || len(req.Tools) > 0 {
 		config = &genai.GenerateContentConfig{}
 
 		// Set generation parameters
@@ -491,6 +519,22 @@ func (p *Provider) Stream(ctx context.Context, req *types.CompletionRequest, cal
 		if req.TopK > 0 {
 			topK := float32(req.TopK)
 			config.TopK = &topK
+		}
+
+		// Add tools if present
+		if len(req.Tools) > 0 {
+			tools := make([]*genai.Tool, len(req.Tools))
+			for i, tool := range req.Tools {
+				funcDecl := &genai.FunctionDeclaration{
+					Name:        tool.Function.Name,
+					Description: tool.Function.Description,
+					Parameters:  convertJSONSchemaToGeminiSchema(tool.Function.Parameters),
+				}
+				tools[i] = &genai.Tool{
+					FunctionDeclarations: []*genai.FunctionDeclaration{funcDecl},
+				}
+			}
+			config.Tools = tools
 		}
 
 		// Disable thinking for faster responses by default
@@ -639,4 +683,129 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+// convertJSONSchemaToGeminiSchema converts a JSON schema to Gemini schema format
+func convertJSONSchemaToGeminiSchema(schema interface{}) *genai.Schema {
+	if schema == nil {
+		return nil
+	}
+
+	schemaMap, ok := schema.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	geminiSchema := &genai.Schema{}
+
+	if typeVal, exists := schemaMap["type"]; exists {
+		if typeStr, ok := typeVal.(string); ok {
+			switch typeStr {
+			case "string":
+				geminiSchema.Type = genai.TypeString
+			case "number":
+				geminiSchema.Type = genai.TypeNumber
+			case "integer":
+				geminiSchema.Type = genai.TypeInteger
+			case "boolean":
+				geminiSchema.Type = genai.TypeBoolean
+			case "array":
+				geminiSchema.Type = genai.TypeArray
+			case "object":
+				geminiSchema.Type = genai.TypeObject
+			}
+		}
+	}
+
+	if description, exists := schemaMap["description"]; exists {
+		if descStr, ok := description.(string); ok {
+			geminiSchema.Description = descStr
+		}
+	}
+
+	// Handle enum values
+	if enumVal, exists := schemaMap["enum"]; exists {
+		if enumSlice, ok := enumVal.([]interface{}); ok {
+			enumStrings := make([]string, len(enumSlice))
+			for i, v := range enumSlice {
+				if str, ok := v.(string); ok {
+					enumStrings[i] = str
+				}
+			}
+			geminiSchema.Enum = enumStrings
+		}
+	}
+
+	// Handle array items
+	if items, exists := schemaMap["items"]; exists {
+		geminiSchema.Items = convertJSONSchemaToGeminiSchema(items)
+	}
+
+	// Handle object properties
+	if properties, exists := schemaMap["properties"]; exists {
+		if propsMap, ok := properties.(map[string]interface{}); ok {
+			geminiSchema.Properties = make(map[string]*genai.Schema)
+			for key, value := range propsMap {
+				geminiSchema.Properties[key] = convertJSONSchemaToGeminiSchema(value)
+			}
+		}
+	}
+
+	// Handle required fields
+	if required, exists := schemaMap["required"]; exists {
+		if reqSlice, ok := required.([]interface{}); ok {
+			requiredStrings := make([]string, len(reqSlice))
+			for i, v := range reqSlice {
+				if str, ok := v.(string); ok {
+					requiredStrings[i] = str
+				}
+			}
+			geminiSchema.Required = requiredStrings
+		}
+	}
+
+	return geminiSchema
+}
+
+// handleToolCalls processes tool calls from the response
+func (p *Provider) handleToolCalls(candidates []*genai.Candidate) []types.ToolCall {
+	var toolCalls []types.ToolCall
+
+	for _, candidate := range candidates {
+		if candidate.Content != nil {
+			for _, part := range candidate.Content.Parts {
+				// Check if this part contains a function call
+				if part != nil && part.FunctionCall != nil {
+					funcCall := part.FunctionCall
+
+					// Convert function call arguments to JSON string
+					argsJSON := ""
+					if funcCall.Args != nil {
+						if jsonBytes, err := json.Marshal(funcCall.Args); err == nil {
+							argsJSON = string(jsonBytes)
+						}
+					}
+
+					// Use the function call ID if available, otherwise generate one
+					callID := funcCall.ID
+					if callID == "" {
+						callID = fmt.Sprintf("call_%s_%d", funcCall.Name, len(toolCalls))
+					}
+
+					toolCall := types.ToolCall{
+						ID:   callID,
+						Type: "function",
+						Function: types.ToolCallFunction{
+							Name:      funcCall.Name,
+							Arguments: argsJSON,
+						},
+						Args: funcCall.Args,
+					}
+					toolCalls = append(toolCalls, toolCall)
+				}
+			}
+		}
+	}
+
+	return toolCalls
 }
