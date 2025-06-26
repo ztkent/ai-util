@@ -8,7 +8,7 @@ Tools for building with AI.
   - [OpenAI](https://platform.openai.com/docs/overview)
   - [Replicate](https://replicate.com/docs)
   - [Google AI](https://ai.google.dev/docs)
-- Consistent client interface across providers:
+- Shared client interface across providers:
   - `Complete` - Single completion requests
   - `Stream` - Streaming completion requests
   - `GetModels` - List available models
