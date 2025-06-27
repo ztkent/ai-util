@@ -61,7 +61,7 @@ func main() {
 
 	completionReq := &types.CompletionRequest{
 		Messages:    messages,
-		Model:       "gemini-2.5-flash",
+		Model:       "gemini-2.0-flash",
 		MaxTokens:   100,
 		Temperature: 0.7,
 	}
@@ -83,7 +83,7 @@ func main() {
 				TextData: "Write a short poem about programming.",
 			},
 		},
-		Model:       "gemini-2.5-flash",
+		Model:       "gemini-2.0-flash",
 		MaxTokens:   200,
 		Temperature: 0.8,
 	}
@@ -100,7 +100,7 @@ func main() {
 
 	// Test token estimation
 	fmt.Printf("\n--- Testing Token Estimation ---\n")
-	tokens, err := provider.EstimateTokens(ctx, messages, "gemini-2.5-flash")
+	tokens, err := provider.EstimateTokens(ctx, messages, "gemini-2.0-flash")
 	if err != nil {
 		log.Fatalf("Failed to estimate tokens: %v", err)
 	}
@@ -173,7 +173,7 @@ func demonstrateTools(ctx context.Context, provider *google.Provider) {
 
 	toolReq := &types.CompletionRequest{
 		Messages:    messages,
-		Model:       "gemini-2.5-flash", // Use a model that supports tools
+		Model:       "gemini-2.0-flash", // Use a model that supports tools
 		MaxTokens:   300,
 		Temperature: 0.1,
 		Tools:       []types.Tool{weatherTool, calculatorTool},
@@ -224,7 +224,7 @@ func demonstrateTools(ctx context.Context, provider *google.Provider) {
 		fmt.Println("\nGetting final response with tool results...")
 		finalReq := &types.CompletionRequest{
 			Messages:    messages,
-			Model:       "gemini-2.5-flash",
+			Model:       "gemini-2.0-flash",
 			MaxTokens:   200,
 			Temperature: 0.1,
 		}
