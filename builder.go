@@ -230,7 +230,7 @@ func NewOpenAI(apiKey string) (*Client, error) {
 	return NewAIClient().
 		WithOpenAI(apiKey).
 		WithDefaultProvider("openai").
-		WithDefaultModel("gpt-3.5-turbo").
+		WithDefaultModel("gpt-4o-mini").
 		Build()
 }
 
@@ -246,6 +246,6 @@ func NewGoogle(apiKey, projectID string) (*Client, error) {
 	return NewAIClient().
 		WithGoogle(apiKey, projectID).
 		WithDefaultProvider("google").
-		WithDefaultModel("gemini-2.0-flash").
+		WithDefaultModel("gemini-2.5-flash").
 		Build()
 }

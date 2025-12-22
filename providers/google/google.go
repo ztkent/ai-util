@@ -68,6 +68,41 @@ func (p *Provider) GetModels(ctx context.Context) ([]*types.Model, error) {
 
 	// Return a list of current Google AI models based on official documentation
 	models := []*types.Model{
+		// Gemini 3.0 series - Next generation reasoning
+		{
+			ID:          "gemini-3-pro-preview",
+			Name:        "Gemini 3 Pro",
+			Provider:    "google",
+			Description: "The most capable AI model, built for the future of reasoning and coding",
+			MaxTokens:   4000000,
+			Capabilities: []string{
+				string(types.CapabilityChat),
+				string(types.CapabilityStreaming),
+				string(types.CapabilityTools),
+				string(types.CapabilityVision),
+				string(types.CapabilityAudio),
+				string(types.CapabilityVideo),
+				string(types.CapabilityThinking),
+				string(types.CapabilityJSON),
+			},
+		},
+		{
+			ID:          "gemini-3-flash-preview",
+			Name:        "Gemini 3 Flash Preview",
+			Provider:    "google",
+			Description: "Ultra-fast, low latency model with advanced reasoning capabilities",
+			MaxTokens:   2000000,
+			Capabilities: []string{
+				string(types.CapabilityChat),
+				string(types.CapabilityStreaming),
+				string(types.CapabilityTools),
+				string(types.CapabilityVision),
+				string(types.CapabilityAudio),
+				string(types.CapabilityVideo),
+				string(types.CapabilityThinking),
+				string(types.CapabilityJSON),
+			},
+		},
 		// Gemini 2.5 series - Latest thinking models
 		{
 			ID:          "gemini-2.5-pro",
@@ -141,119 +176,12 @@ func (p *Provider) GetModels(ctx context.Context) ([]*types.Model, error) {
 				string(types.CapabilityJSON),
 			},
 		},
-		// Gemini 2.0 series
-		{
-			ID:          "gemini-2.0-flash",
-			Name:        "Gemini 2.0 Flash",
-			Provider:    "google",
-			Description: "Next generation features with speed and realtime streaming capabilities",
-			MaxTokens:   1000000,
-			Capabilities: []string{
-				string(types.CapabilityChat),
-				string(types.CapabilityStreaming),
-				string(types.CapabilityTools),
-				string(types.CapabilityVision),
-				string(types.CapabilityAudio),
-				string(types.CapabilityVideo),
-				string(types.CapabilityJSON),
-			},
-		},
-		{
-			ID:          "gemini-2.0-flash-preview-image-generation",
-			Name:        "Gemini 2.0 Flash Preview Image Generation",
-			Provider:    "google",
-			Description: "Conversational image generation and editing capabilities",
-			MaxTokens:   1000000,
-			Capabilities: []string{
-				string(types.CapabilityChat),
-				string(types.CapabilityImage),
-				string(types.CapabilityVision),
-				string(types.CapabilityAudio),
-				string(types.CapabilityVideo),
-				string(types.CapabilityJSON),
-			},
-		},
-		{
-			ID:          "gemini-2.0-flash-lite",
-			Name:        "Gemini 2.0 Flash-Lite",
-			Provider:    "google",
-			Description: "Cost efficient model with low latency for high-volume tasks",
-			MaxTokens:   1000000,
-			Capabilities: []string{
-				string(types.CapabilityChat),
-				string(types.CapabilityStreaming),
-				string(types.CapabilityVision),
-				string(types.CapabilityAudio),
-				string(types.CapabilityVideo),
-				string(types.CapabilityJSON),
-			},
-		},
-		// Gemini 1.5 series - Proven and stable
-		{
-			ID:          "gemini-1.5-flash",
-			Name:        "Gemini 1.5 Flash",
-			Provider:    "google",
-			Description: "Fast and versatile performance across diverse tasks with 1M token context",
-			MaxTokens:   1000000,
-			Capabilities: []string{
-				string(types.CapabilityChat),
-				string(types.CapabilityStreaming),
-				string(types.CapabilityVision),
-				string(types.CapabilityAudio),
-				string(types.CapabilityVideo),
-				string(types.CapabilityJSON),
-			},
-		},
-		{
-			ID:          "gemini-1.5-flash-8b",
-			Name:        "Gemini 1.5 Flash-8B",
-			Provider:    "google",
-			Description: "Smaller model for high volume and lower intelligence tasks",
-			MaxTokens:   1000000,
-			Capabilities: []string{
-				string(types.CapabilityChat),
-				string(types.CapabilityStreaming),
-				string(types.CapabilityVision),
-				string(types.CapabilityAudio),
-				string(types.CapabilityVideo),
-				string(types.CapabilityJSON),
-			},
-		},
-		{
-			ID:          "gemini-1.5-pro",
-			Name:        "Gemini 1.5 Pro",
-			Provider:    "google",
-			Description: "Complex reasoning tasks requiring high intelligence with 2M token context",
-			MaxTokens:   2000000,
-			Capabilities: []string{
-				string(types.CapabilityChat),
-				string(types.CapabilityStreaming),
-				string(types.CapabilityTools),
-				string(types.CapabilityVision),
-				string(types.CapabilityAudio),
-				string(types.CapabilityVideo),
-				string(types.CapabilityJSON),
-			},
-		},
 		// Live interaction models
 		{
 			ID:          "gemini-2.5-flash-live",
 			Name:        "Gemini 2.5 Flash Live",
 			Provider:    "google",
 			Description: "Low-latency bidirectional voice and video interactions",
-			MaxTokens:   1000000,
-			Capabilities: []string{
-				string(types.CapabilityLive),
-				string(types.CapabilityAudio),
-				string(types.CapabilityVideo),
-				string(types.CapabilityStreaming),
-			},
-		},
-		{
-			ID:          "gemini-2.0-flash-live",
-			Name:        "Gemini 2.0 Flash Live",
-			Provider:    "google",
-			Description: "Real-time voice and video interactions with 2.0 capabilities",
 			MaxTokens:   1000000,
 			Capabilities: []string{
 				string(types.CapabilityLive),
@@ -309,6 +237,17 @@ func (p *Provider) GetModels(ctx context.Context) ([]*types.Model, error) {
 		{
 			ID:          "veo-2.0-generate-001",
 			Name:        "Veo 2",
+			Provider:    "google",
+			Description: "High quality video generation from text and images",
+			MaxTokens:   1024,
+			Capabilities: []string{
+				"video_generation",
+				string(types.CapabilityJSON),
+			},
+		},
+		{
+			ID:          "veo-3.0-generate-001",
+			Name:        "Veo 3",
 			Provider:    "google",
 			Description: "High quality video generation from text and images",
 			MaxTokens:   1024,
@@ -625,29 +564,22 @@ func (p *Provider) EstimateTokens(ctx context.Context, messages []*types.Message
 // ValidateModel checks if a model is supported
 func (p *Provider) ValidateModel(model string) error {
 	supportedModels := []string{
+		// Gemini 3.0 series
+		"gemini-3-pro-preview",
+		"gemini-3-flash-preview",
 		// Gemini 2.5 series
 		"gemini-2.5-pro",
 		"gemini-2.5-flash",
 		"gemini-2.5-flash-lite",
 		"gemini-2.5-flash-preview-tts",
 		"gemini-2.5-pro-preview-tts",
-		// Gemini 2.0 series
-		"gemini-2.0-flash",
-		"gemini-2.0-flash-preview-image-generation",
-		"gemini-2.0-flash-lite",
-		// Gemini 1.5 series
-		"gemini-1.5-flash",
-		"gemini-1.5-flash-8b",
-		"gemini-1.5-pro",
-		// Live models
 		"gemini-2.5-flash-live",
-		"gemini-2.0-flash-live",
 		// Embedding models
 		"text-embedding-004",
-		"gemini-embedding-exp",
 		// Image and video generation
 		"imagen-4.0-generate-preview",
 		"imagen-3.0-generate-002",
+		"veo-3.0-generate-001",
 		"veo-2.0-generate-001",
 		// Legacy support
 		"gemma-3",

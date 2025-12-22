@@ -160,11 +160,13 @@ if err != nil {
 
 | Model Name | Model Identifier |
 |------------|------------------|
+| GPT-5 | `gpt-5` |
+| O3 Preview | `o3-preview` |
+| O3 Mini | `o3-mini` |
 | GPT-4o | `gpt-4o` |
 | GPT-4o Mini | `gpt-4o-mini` |
 | GPT-4 Turbo | `gpt-4-turbo` |
 | GPT-4 | `gpt-4` |
-| GPT-3.5 Turbo | `gpt-3.5-turbo` |
 | O1 Preview | `o1-preview` |
 | O1 Mini | `o1-mini` |
 
@@ -172,20 +174,15 @@ if err != nil {
 
 | Model Name | Model Identifier | Capabilities |
 |------------|------------------|--------------|
+| **Gemini 3.0 Series (Next Gen)** | | |
+| Gemini 3 Pro | `gemini-3-pro-preview` | Chat, Streaming, Tools, Vision, Audio, Video, Thinking |
+| Gemini 3 Flash Preview | `gemini-3-flash-preview` | Chat, Streaming, Tools, Vision, Audio, Video, Thinking |
 | **Gemini 2.5 Series (Latest)** | | |
 | Gemini 2.5 Pro | `gemini-2.5-pro` | Chat, Streaming, Tools, Vision, Audio, Video, Thinking |
 | Gemini 2.5 Flash | `gemini-2.5-flash` | Chat, Streaming, Tools, Vision, Audio, Video, Thinking |
 | Gemini 2.5 Flash-Lite | `gemini-2.5-flash-lite` | Chat, Streaming, Tools, Vision, Audio, Video |
 | Gemini 2.5 Flash Preview TTS | `gemini-2.5-flash-preview-tts` | Text-to-Speech |
 | Gemini 2.5 Pro Preview TTS | `gemini-2.5-pro-preview-tts` | Text-to-Speech |
-| **Gemini 2.0 Series** | | |
-| Gemini 2.0 Flash | `gemini-2.0-flash` | Chat, Streaming, Tools, Vision, Audio, Video |
-| Gemini 2.0 Flash Preview Image Gen | `gemini-2.0-flash-preview-image-generation` | Chat, Image Generation, Vision, Audio, Video |
-| Gemini 2.0 Flash-Lite | `gemini-2.0-flash-lite` | Chat, Streaming, Vision, Audio, Video |
-| **Gemini 1.5 Series (Stable)** | | |
-| Gemini 1.5 Pro | `gemini-1.5-pro` | Chat, Streaming, Tools, Vision, Audio, Video |
-| Gemini 1.5 Flash | `gemini-1.5-flash` | Chat, Streaming, Vision, Audio, Video |
-| Gemini 1.5 Flash-8B | `gemini-1.5-flash-8b` | Chat, Streaming, Vision, Audio, Video |
 | **Live Interaction Models** | | |
 | Gemini 2.5 Flash Live | `gemini-2.5-flash-live` | Live Audio/Video, Streaming |
 | Gemini 2.0 Flash Live | `gemini-2.0-flash-live` | Live Audio/Video, Streaming |
@@ -196,6 +193,9 @@ if err != nil {
 | Imagen 4 | `imagen-4.0-generate-preview` | Image Generation |
 | Imagen 3 | `imagen-3.0-generate-002` | Image Generation |
 | Veo 2 | `veo-2.0-generate-001` | Video Generation |
+| Veo 3 | `veo-3.0-generate-001` | Video Generation |
+
+` | Video Generation |
 
 ### Replicate Models
 

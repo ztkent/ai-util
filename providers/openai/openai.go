@@ -166,7 +166,8 @@ func (p *Provider) EstimateTokens(ctx context.Context, messages []*types.Message
 // ValidateModel checks if a model is supported
 func (p *Provider) ValidateModel(model string) error {
 	supportedModels := []string{
-		"gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini",
+		"gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini",
+		"gpt-5", "o3-preview", "o3-mini",
 		"o1-preview", "o1-mini", "gpt-4-1106-preview", "gpt-4-0125-preview",
 	}
 
@@ -400,12 +401,10 @@ func getModelCapabilities(modelID string) []string {
 	capabilities := []string{string(types.CapabilityChat), string(types.CapabilityStreaming)}
 
 	// Add tools capability for newer models
-	if !strings.Contains(modelID, "gpt-3.5") {
-		capabilities = append(capabilities, string(types.CapabilityTools))
-	}
+	capabilities = append(capabilities, string(types.CapabilityTools))
 
 	// Add JSON capability for supported models
-	if strings.Contains(modelID, "gpt-4") || strings.Contains(modelID, "gpt-3.5-turbo") {
+	if strings.Contains(modelID, "gpt-4") || strings.Contains(modelID, "gpt-5") || strings.Contains(modelID, "o3") || strings.Contains(modelID, "o1") {
 		capabilities = append(capabilities, string(types.CapabilityJSON))
 	}
 
@@ -415,13 +414,15 @@ func getModelCapabilities(modelID string) []string {
 // getModelMaxTokens returns max tokens for known models
 func getModelMaxTokens(modelID string) (int, bool) {
 	maxTokens := map[string]int{
-		"gpt-3.5-turbo": 4096,
 		"gpt-4":         8192,
 		"gpt-4-turbo":   128000,
 		"gpt-4o":        128000,
 		"gpt-4o-mini":   128000,
+		"gpt-5":         200000,
 		"o1-preview":    128000,
 		"o1-mini":       128000,
+		"o3-preview":    200000,
+		"o3-mini":       200000,
 	}
 
 	tokens, exists := maxTokens[modelID]

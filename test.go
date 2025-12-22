@@ -10,7 +10,7 @@ func TestBuilder(t *testing.T) {
 	// Test builder without actual API keys
 	builder := NewAIClient().
 		WithDefaultProvider("openai").
-		WithDefaultModel("gpt-3.5-turbo").
+		WithDefaultModel("gpt-4o-mini").
 		WithDefaultMaxTokens(1000).
 		WithDefaultTemperature(0.5)
 
@@ -19,8 +19,8 @@ func TestBuilder(t *testing.T) {
 		t.Errorf("Expected default provider to be 'openai', got %s", builder.config.DefaultProvider)
 	}
 
-	if builder.config.DefaultModel != "gpt-3.5-turbo" {
-		t.Errorf("Expected default model to be 'gpt-3.5-turbo', got %s", builder.config.DefaultModel)
+	if builder.config.DefaultModel != "gpt-4o-mini" {
+		t.Errorf("Expected default model to be 'gpt-4o-mini', got %s", builder.config.DefaultModel)
 	}
 
 	if builder.config.DefaultMaxTokens != 1000 {
@@ -67,10 +67,10 @@ func TestMessage(t *testing.T) {
 
 func TestModel(t *testing.T) {
 	model := &types.Model{
-		ID:           "gpt-3.5-turbo",
-		Name:         "GPT-3.5 Turbo",
+		ID:           "gpt-4o-mini",
+		Name:         "GPT-4o Mini",
 		Provider:     "openai",
-		MaxTokens:    4096,
+		MaxTokens:    128000,
 		Capabilities: []string{"chat", "streaming"},
 	}
 
@@ -86,8 +86,8 @@ func TestModel(t *testing.T) {
 		t.Error("Expected model to not have vision capability")
 	}
 
-	if model.String() != "openai/gpt-3.5-turbo" {
-		t.Errorf("Expected model string to be 'openai/gpt-3.5-turbo', got %s", model.String())
+	if model.String() != "openai/gpt-4o-mini" {
+		t.Errorf("Expected model string to be 'openai/gpt-4o-mini', got %s", model.String())
 	}
 }
 
@@ -95,7 +95,7 @@ func TestModelRegistry(t *testing.T) {
 	registry := types.NewModelRegistry()
 
 	model1 := &types.Model{
-		ID:       "gpt-3.5-turbo",
+		ID:       "gpt-4o-mini",
 		Provider: "openai",
 	}
 
@@ -108,13 +108,13 @@ func TestModelRegistry(t *testing.T) {
 	registry.Register(model2)
 
 	// Test retrieval
-	retrieved, exists := registry.Get("openai", "gpt-3.5-turbo")
+	retrieved, exists := registry.Get("openai", "gpt-4o-mini")
 	if !exists {
 		t.Error("Expected to find registered model")
 	}
 
-	if retrieved.ID != "gpt-3.5-turbo" {
-		t.Errorf("Expected retrieved model ID to be 'gpt-3.5-turbo', got %s", retrieved.ID)
+	if retrieved.ID != "gpt-4o-mini" {
+		t.Errorf("Expected retrieved model ID to be 'gpt-4o-mini', got %s", retrieved.ID)
 	}
 
 	// Test provider filtering

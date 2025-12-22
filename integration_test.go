@@ -24,7 +24,7 @@ func TestOpenAIIntegration(t *testing.T) {
 	client, err := NewAIClient().
 		WithOpenAI(apiKey).
 		WithDefaultProvider("openai").
-		WithDefaultModel("gpt-3.5-turbo").
+		WithDefaultModel("gpt-4o-mini").
 		Build()
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
@@ -102,7 +102,7 @@ func TestGoogleIntegration(t *testing.T) {
 	client, err := NewAIClient().
 		WithGoogle(apiKey, "").
 		WithDefaultProvider("google").
-		WithDefaultModel("gemini-2.0-flash").
+		WithDefaultModel("gemini-2.5-flash").
 		Build()
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
@@ -141,7 +141,7 @@ func TestConversationIntegration(t *testing.T) {
 	client, err := NewAIClient().
 		WithOpenAI(apiKey).
 		WithDefaultProvider("openai").
-		WithDefaultModel("gpt-3.5-turbo").
+		WithDefaultModel("gpt-4o-mini").
 		Build()
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
@@ -158,7 +158,7 @@ func TestConversationIntegration(t *testing.T) {
 	ctx := context.Background()
 
 	// Send message using conversation's Send method
-	resp, err := conv.Send(ctx, "What is 2+2?", "gpt-3.5-turbo")
+	resp, err := conv.Send(ctx, "What is 2+2?", "gpt-4o-mini")
 	if err != nil {
 		t.Fatalf("Conversation send failed: %v", err)
 	}
@@ -188,7 +188,7 @@ func TestOpenAIStreamingIntegration(t *testing.T) {
 	client, err := NewAIClient().
 		WithOpenAI(apiKey).
 		WithDefaultProvider("openai").
-		WithDefaultModel("gpt-3.5-turbo").
+		WithDefaultModel("gpt-4o-mini").
 		Build()
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
@@ -262,7 +262,7 @@ func TestGoogleStreamingIntegration(t *testing.T) {
 	client, err := NewAIClient().
 		WithGoogle(apiKey, "").
 		WithDefaultProvider("google").
-		WithDefaultModel("gemini-2.0-flash").
+		WithDefaultModel("gemini-2.5-flash").
 		Build()
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
@@ -414,7 +414,7 @@ func TestConversationStreamingIntegration(t *testing.T) {
 	client, err := NewAIClient().
 		WithOpenAI(apiKey).
 		WithDefaultProvider("openai").
-		WithDefaultModel("gpt-3.5-turbo").
+		WithDefaultModel("gpt-4o-mini").
 		Build()
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
@@ -433,7 +433,7 @@ func TestConversationStreamingIntegration(t *testing.T) {
 	var streamedContent string
 	var chunkCount int
 
-	err = conv.SendStream(ctx, "What is 5 + 3?", "gpt-3.5-turbo", func(ctx context.Context, response *types.StreamResponse) error {
+	err = conv.SendStream(ctx, "What is 5 + 3?", "gpt-4o-mini", func(ctx context.Context, response *types.StreamResponse) error {
 		chunkCount++
 
 		if response.Delta != nil && response.Delta.TextData != "" {
@@ -506,7 +506,7 @@ func TestMultiProviderStreamingComparison(t *testing.T) {
 		client, err := NewAIClient().
 			WithOpenAI(openaiKey).
 			WithDefaultProvider("openai").
-			WithDefaultModel("gpt-3.5-turbo").
+			WithDefaultModel("gpt-4o-mini").
 			Build()
 		if err == nil {
 			var content string
@@ -550,7 +550,7 @@ func TestMultiProviderStreamingComparison(t *testing.T) {
 		client, err := NewAIClient().
 			WithGoogle(googleKey, "").
 			WithDefaultProvider("google").
-			WithDefaultModel("gemini-2.0-flash").
+			WithDefaultModel("gemini-2.5-flash").
 			Build()
 		if err == nil {
 			var content string

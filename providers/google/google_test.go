@@ -21,7 +21,7 @@ func TestGoogleProvider_ValidateModel(t *testing.T) {
 	validModels := []string{
 		"gemini-2.5-pro",
 		"gemini-2.5-flash",
-		"gemini-1.5-pro",
+		"gemini-3-pro-preview",
 		"text-embedding-004",
 	}
 
@@ -71,7 +71,7 @@ func TestGoogleProvider_GetModels(t *testing.T) {
 	expectedModels := []string{
 		"gemini-2.5-pro",
 		"gemini-2.5-flash",
-		"gemini-1.5-pro",
+		"gemini-3-pro-preview",
 	}
 
 	for _, expectedModel := range expectedModels {
@@ -96,7 +96,7 @@ func TestGoogleProvider_EstimateTokens(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	tokens, err := provider.EstimateTokens(ctx, messages, "gemini-2.0-flash")
+	tokens, err := provider.EstimateTokens(ctx, messages, "gemini-2.5-flash")
 	if err != nil {
 		t.Fatalf("Failed to estimate tokens: %v", err)
 	}

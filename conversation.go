@@ -84,7 +84,7 @@ func (c *Conversation) AddMessage(message *types.Message) error {
 		// Use a default model for estimation if none specified
 		model := c.client.defaultConfig.DefaultModel
 		if model == "" {
-			model = "gpt-3.5-turbo" // Fallback
+			model = "gpt-4o-mini" // Fallback
 		}
 
 		tokens, err := c.client.EstimateTokens(context.Background(), []*types.Message{message}, model)
