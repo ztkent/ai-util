@@ -195,8 +195,6 @@ if err != nil {
 | Veo 2 | `veo-2.0-generate-001` | Video Generation |
 | Veo 3 | `veo-3.0-generate-001` | Video Generation |
 
-` | Video Generation |
-
 ### Replicate Models
 
 | Model Name | Model Identifier |
