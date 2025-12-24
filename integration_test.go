@@ -5,7 +5,9 @@ package aiutil
 
 import (
 	"context"
+	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/ztkent/ai-util/types"
@@ -670,4 +672,215 @@ func TestMultiProviderStreamingComparison(t *testing.T) {
 	} else {
 		t.Logf("Successfully tested streaming with %d/%d providers", successCount, len(results))
 	}
+}
+
+// TestGoogleJSONModeIntegration validates that the JSON response format works correctly
+// Run with: go test -tags=integration -v -run TestGoogleJSONMode
+func TestGoogleJSONModeIntegration(t *testing.T) {
+	apiKey := os.Getenv("GOOGLE_API_KEY")
+	if apiKey == "" {
+		t.Skip("GOOGLE_API_KEY not set, skipping integration test")
+	}
+
+	client, err := NewAIClient().
+		WithGoogle(apiKey, "").
+		WithDefaultProvider("google").
+		WithDefaultModel("gemini-2.5-flash").
+		Build()
+	if err != nil {
+		t.Fatalf("Failed to create client: %v", err)
+	}
+	defer client.Close()
+
+	ctx := context.Background()
+
+	t.Run("json_object mode returns valid JSON", func(t *testing.T) {
+		req := &types.CompletionRequest{
+			Messages: []*types.Message{
+				types.NewTextMessage(types.RoleSystem, "You are a JSON API. Always respond with valid JSON only."),
+				types.NewTextMessage(types.RoleUser, `Count the words in this sentence: "Hello world this is a test"`),
+			},
+			MaxTokens:   256,
+			Temperature: 0.1,
+			ResponseFormat: &types.ResponseFormat{
+				Type: "json_object",
+			},
+		}
+
+		resp, err := client.Complete(ctx, req)
+		if err != nil {
+			t.Fatalf("Completion failed: %v", err)
+		}
+
+		responseText := resp.Message.GetText()
+		t.Logf("Raw response: %q", responseText)
+
+		// Verify response is NOT wrapped in markdown code blocks
+		if strings.HasPrefix(responseText, "```") {
+			t.Errorf("Response should not be wrapped in markdown code blocks, got: %s", responseText)
+		}
+		if strings.Contains(responseText, "```json") {
+			t.Errorf("Response contains markdown JSON block, got: %s", responseText)
+		}
+
+		// Verify response is valid JSON
+		var result map[string]interface{}
+		if err := json.Unmarshal([]byte(responseText), &result); err != nil {
+			t.Errorf("Response is not valid JSON: %v\nResponse: %s", err, responseText)
+		}
+
+		// Verify expected field exists
+		if _, ok := result["word_count"]; !ok {
+			t.Errorf("Expected 'word_count' field in response, got: %v", result)
+		}
+
+		t.Logf("Parsed JSON: %+v", result)
+	})
+
+	t.Run("json_object mode with array response", func(t *testing.T) {
+		req := &types.CompletionRequest{
+			Messages: []*types.Message{
+				types.NewTextMessage(types.RoleUser, `List exactly 3 programming languages with their paradigms. Return as a JSON array:
+[{"name": "<language>", "paradigm": "<paradigm>"}]`),
+			},
+			MaxTokens:   300,
+			Temperature: 0.1,
+			ResponseFormat: &types.ResponseFormat{
+				Type: "json_object",
+			},
+		}
+
+		resp, err := client.Complete(ctx, req)
+		if err != nil {
+			t.Fatalf("Completion failed: %v", err)
+		}
+
+		responseText := resp.Message.GetText()
+		t.Logf("Raw response: %q", responseText)
+
+		// Verify no markdown wrapping
+		if strings.Contains(responseText, "```") {
+			t.Errorf("Response contains markdown code blocks: %s", responseText)
+		}
+
+		// Verify valid JSON (could be array or object containing array)
+		var result interface{}
+		if err := json.Unmarshal([]byte(responseText), &result); err != nil {
+			t.Errorf("Response is not valid JSON: %v\nResponse: %s", err, responseText)
+		}
+
+		t.Logf("Parsed JSON: %+v", result)
+	})
+
+	t.Run("without json_object mode may return markdown", func(t *testing.T) {
+		// This test documents the behavior WITHOUT json_object mode
+		// The response may or may not be wrapped in markdown
+		req := &types.CompletionRequest{
+			Messages: []*types.Message{
+				types.NewTextMessage(types.RoleUser, `Return this exact JSON: {"test": true}`),
+			},
+			MaxTokens:   100,
+			Temperature: 0.1,
+			// Note: No ResponseFormat set
+		}
+
+		resp, err := client.Complete(ctx, req)
+		if err != nil {
+			t.Fatalf("Completion failed: %v", err)
+		}
+
+		responseText := resp.Message.GetText()
+		t.Logf("Response without json_object mode: %q", responseText)
+
+		// Just log the result - we're not asserting markdown wrapping
+		// because behavior may vary
+		if strings.Contains(responseText, "```") {
+			t.Logf("Note: Response was wrapped in markdown (expected without json_object mode)")
+		} else {
+			t.Logf("Note: Response was NOT wrapped in markdown")
+		}
+	})
+}
+
+// TestGoogleJSONModeComplexStructure tests JSON mode with nested structures
+func TestGoogleJSONModeComplexStructure(t *testing.T) {
+	apiKey := os.Getenv("GOOGLE_API_KEY")
+	if apiKey == "" {
+		t.Skip("GOOGLE_API_KEY not set, skipping integration test")
+	}
+
+	client, err := NewAIClient().
+		WithGoogle(apiKey, "").
+		WithDefaultProvider("google").
+		WithDefaultModel("gemini-2.5-flash").
+		Build()
+	if err != nil {
+		t.Fatalf("Failed to create client: %v", err)
+	}
+	defer client.Close()
+
+	ctx := context.Background()
+
+	req := &types.CompletionRequest{
+		Messages: []*types.Message{
+			types.NewTextMessage(types.RoleSystem, "You are a JSON API. Always respond with valid JSON only, no explanations."),
+			types.NewTextMessage(types.RoleUser, `Analyze these 2 article headlines and rate their trending potential.
+
+Article 1: "Breaking: Major Tech Company Announces Revolutionary AI Breakthrough"
+Article 2: "Local Weather Report: Partly Cloudy Tomorrow"
+
+Respond with this JSON structure:
+{"articles": [{"id": 1, "title": "headline", "trending_score": 8.5, "trending_reason": "reason"}], "analysis_summary": "summary"}`),
+		},
+		MaxTokens:   800,
+		Temperature: 0.2,
+		ResponseFormat: &types.ResponseFormat{
+			Type: "json_object",
+		},
+	}
+
+	resp, err := client.Complete(ctx, req)
+	if err != nil {
+		t.Fatalf("Completion failed: %v", err)
+	}
+
+	responseText := resp.Message.GetText()
+	t.Logf("Raw response: %q", responseText)
+
+	// Verify no markdown wrapping
+	if strings.HasPrefix(strings.TrimSpace(responseText), "```") {
+		t.Errorf("Response starts with markdown code block: %s", responseText)
+	}
+
+	// Parse and validate structure
+	var result struct {
+		Articles []struct {
+			ID             int     `json:"id"`
+			Title          string  `json:"title"`
+			TrendingScore  float64 `json:"trending_score"`
+			TrendingReason string  `json:"trending_reason"`
+		} `json:"articles"`
+		AnalysisSummary string `json:"analysis_summary"`
+	}
+
+	if err := json.Unmarshal([]byte(responseText), &result); err != nil {
+		t.Fatalf("Failed to parse response as expected structure: %v\nResponse: %s", err, responseText)
+	}
+
+	// Validate articles were analyzed
+	if len(result.Articles) == 0 {
+		t.Error("Expected at least one article in response")
+	}
+
+	for i, article := range result.Articles {
+		if article.Title == "" {
+			t.Errorf("Article %d has empty title", i)
+		}
+		if article.TrendingScore < 0 || article.TrendingScore > 10 {
+			t.Errorf("Article %d has invalid trending score: %f", i, article.TrendingScore)
+		}
+	}
+
+	t.Logf("Successfully parsed %d articles", len(result.Articles))
+	t.Logf("Analysis summary: %s", result.AnalysisSummary)
 }

@@ -295,7 +295,8 @@ func (p *Provider) Complete(ctx context.Context, req *types.CompletionRequest) (
 
 	// Create generation config
 	var config *genai.GenerateContentConfig
-	if req.MaxTokens > 0 || req.Temperature > 0 || req.TopP > 0 || req.TopK > 0 || len(req.Tools) > 0 {
+	needsConfig := req.MaxTokens > 0 || req.Temperature > 0 || req.TopP > 0 || req.TopK > 0 || len(req.Tools) > 0 || req.ResponseFormat != nil
+	if needsConfig {
 		config = &genai.GenerateContentConfig{}
 
 		// Set generation parameters
@@ -329,6 +330,14 @@ func (p *Provider) Complete(ctx context.Context, req *types.CompletionRequest) (
 				}
 			}
 			config.Tools = tools
+		}
+
+		// Set JSON response format if requested
+		if req.ResponseFormat != nil && req.ResponseFormat.Type == "json_object" {
+			config.ResponseMIMEType = "application/json"
+			if req.ResponseFormat.Schema != nil {
+				config.ResponseSchema = convertJSONSchemaToGeminiSchema(req.ResponseFormat.Schema)
+			}
 		}
 
 		// Disable thinking for faster responses by default
@@ -440,7 +449,8 @@ func (p *Provider) Stream(ctx context.Context, req *types.CompletionRequest, cal
 
 	// Create generation config
 	var config *genai.GenerateContentConfig
-	if req.MaxTokens > 0 || req.Temperature > 0 || req.TopP > 0 || req.TopK > 0 || len(req.Tools) > 0 {
+	needsConfig := req.MaxTokens > 0 || req.Temperature > 0 || req.TopP > 0 || req.TopK > 0 || len(req.Tools) > 0 || req.ResponseFormat != nil
+	if needsConfig {
 		config = &genai.GenerateContentConfig{}
 
 		// Set generation parameters
@@ -474,6 +484,14 @@ func (p *Provider) Stream(ctx context.Context, req *types.CompletionRequest, cal
 				}
 			}
 			config.Tools = tools
+		}
+
+		// Set JSON response format if requested
+		if req.ResponseFormat != nil && req.ResponseFormat.Type == "json_object" {
+			config.ResponseMIMEType = "application/json"
+			if req.ResponseFormat.Schema != nil {
+				config.ResponseSchema = convertJSONSchemaToGeminiSchema(req.ResponseFormat.Schema)
+			}
 		}
 
 		// Disable thinking for faster responses by default
