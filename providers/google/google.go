@@ -190,6 +190,59 @@ func (p *Provider) GetModels(ctx context.Context) ([]*types.Model, error) {
 				string(types.CapabilityStreaming),
 			},
 		},
+		// Gemma 3 series
+		{
+			ID:          "gemma-3-27b-it",
+			Name:        "Gemma 3 27B IT",
+			Provider:    "google",
+			Description: "Best for complex reasoning and chat",
+			MaxTokens:   8192,
+			Capabilities: []string{
+				string(types.CapabilityChat),
+				string(types.CapabilityStreaming),
+				string(types.CapabilityTools),
+				string(types.CapabilityJSON),
+			},
+		},
+		{
+			ID:          "gemma-3-12b-it",
+			Name:        "Gemma 3 12B IT",
+			Provider:    "google",
+			Description: "High performance for laptops/desktops",
+			MaxTokens:   8192,
+			Capabilities: []string{
+				string(types.CapabilityChat),
+				string(types.CapabilityStreaming),
+				string(types.CapabilityTools),
+				string(types.CapabilityJSON),
+			},
+		},
+		{
+			ID:          "gemma-3-4b-it",
+			Name:        "Gemma 3 4B IT",
+			Provider:    "google",
+			Description: "Balanced for efficiency and mobile",
+			MaxTokens:   8192,
+			Capabilities: []string{
+				string(types.CapabilityChat),
+				string(types.CapabilityStreaming),
+				string(types.CapabilityTools),
+				string(types.CapabilityJSON),
+			},
+		},
+		{
+			ID:          "gemma-3-1b-it",
+			Name:        "Gemma 3 1B IT",
+			Provider:    "google",
+			Description: "Ultra-efficient for text-only tasks",
+			MaxTokens:   8192,
+			Capabilities: []string{
+				string(types.CapabilityChat),
+				string(types.CapabilityStreaming),
+				string(types.CapabilityTools),
+				string(types.CapabilityJSON),
+			},
+		},
 		// Embedding models
 		{
 			ID:          "text-embedding-004",
@@ -592,6 +645,11 @@ func (p *Provider) ValidateModel(model string) error {
 		"gemini-2.5-flash-preview-tts",
 		"gemini-2.5-pro-preview-tts",
 		"gemini-2.5-flash-live",
+		// Gemma 3 series
+		"gemma-3-27b-it",
+		"gemma-3-12b-it",
+		"gemma-3-4b-it",
+		"gemma-3-1b-it",
 		// Embedding models
 		"text-embedding-004",
 		// Image and video generation
@@ -599,9 +657,6 @@ func (p *Provider) ValidateModel(model string) error {
 		"imagen-3.0-generate-002",
 		"veo-3.0-generate-001",
 		"veo-2.0-generate-001",
-		// Legacy support
-		"gemma-3",
-		"gemma-3n",
 	}
 
 	for _, supported := range supportedModels {
