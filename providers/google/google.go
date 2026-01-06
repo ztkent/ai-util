@@ -348,7 +348,7 @@ func (p *Provider) Complete(ctx context.Context, req *types.CompletionRequest) (
 
 	// Create generation config
 	var config *genai.GenerateContentConfig
-	needsConfig := req.MaxTokens > 0 || req.Temperature > 0 || req.TopP > 0 || req.TopK > 0 || len(req.Tools) > 0 || req.ResponseFormat != nil
+	needsConfig := req.MaxTokens > 0 || req.Temperature > 0 || req.TopP > 0 || req.TopK > 0 || len(req.Tools) > 0 || len(req.GroundingTools) > 0 || req.ResponseFormat != nil
 	if needsConfig {
 		config = &genai.GenerateContentConfig{}
 
@@ -369,19 +369,38 @@ func (p *Provider) Complete(ctx context.Context, req *types.CompletionRequest) (
 			config.TopK = &topK
 		}
 
-		// Add tools if present
+		// Add function tools if present
+		var tools []*genai.Tool
 		if len(req.Tools) > 0 {
-			tools := make([]*genai.Tool, len(req.Tools))
-			for i, tool := range req.Tools {
+			for _, tool := range req.Tools {
 				funcDecl := &genai.FunctionDeclaration{
 					Name:        tool.Function.Name,
 					Description: tool.Function.Description,
 					Parameters:  convertJSONSchemaToGeminiSchema(tool.Function.Parameters),
 				}
-				tools[i] = &genai.Tool{
+				tools = append(tools, &genai.Tool{
 					FunctionDeclarations: []*genai.FunctionDeclaration{funcDecl},
+				})
+			}
+		}
+
+		// Add grounding tools if present (Google-specific: URL context, Google Search)
+		if len(req.GroundingTools) > 0 {
+			for _, gt := range req.GroundingTools {
+				switch gt.Type {
+				case types.GroundingToolURLContext:
+					tools = append(tools, &genai.Tool{
+						URLContext: &genai.URLContext{},
+					})
+				case types.GroundingToolGoogleSearch:
+					tools = append(tools, &genai.Tool{
+						GoogleSearch: &genai.GoogleSearch{},
+					})
 				}
 			}
+		}
+
+		if len(tools) > 0 {
 			config.Tools = tools
 		}
 
@@ -502,7 +521,7 @@ func (p *Provider) Stream(ctx context.Context, req *types.CompletionRequest, cal
 
 	// Create generation config
 	var config *genai.GenerateContentConfig
-	needsConfig := req.MaxTokens > 0 || req.Temperature > 0 || req.TopP > 0 || req.TopK > 0 || len(req.Tools) > 0 || req.ResponseFormat != nil
+	needsConfig := req.MaxTokens > 0 || req.Temperature > 0 || req.TopP > 0 || req.TopK > 0 || len(req.Tools) > 0 || len(req.GroundingTools) > 0 || req.ResponseFormat != nil
 	if needsConfig {
 		config = &genai.GenerateContentConfig{}
 
@@ -523,19 +542,38 @@ func (p *Provider) Stream(ctx context.Context, req *types.CompletionRequest, cal
 			config.TopK = &topK
 		}
 
-		// Add tools if present
+		// Add function tools if present
+		var tools []*genai.Tool
 		if len(req.Tools) > 0 {
-			tools := make([]*genai.Tool, len(req.Tools))
-			for i, tool := range req.Tools {
+			for _, tool := range req.Tools {
 				funcDecl := &genai.FunctionDeclaration{
 					Name:        tool.Function.Name,
 					Description: tool.Function.Description,
 					Parameters:  convertJSONSchemaToGeminiSchema(tool.Function.Parameters),
 				}
-				tools[i] = &genai.Tool{
+				tools = append(tools, &genai.Tool{
 					FunctionDeclarations: []*genai.FunctionDeclaration{funcDecl},
+				})
+			}
+		}
+
+		// Add grounding tools if present (Google-specific: URL context, Google Search)
+		if len(req.GroundingTools) > 0 {
+			for _, gt := range req.GroundingTools {
+				switch gt.Type {
+				case types.GroundingToolURLContext:
+					tools = append(tools, &genai.Tool{
+						URLContext: &genai.URLContext{},
+					})
+				case types.GroundingToolGoogleSearch:
+					tools = append(tools, &genai.Tool{
+						GoogleSearch: &genai.GoogleSearch{},
+					})
 				}
 			}
+		}
+
+		if len(tools) > 0 {
 			config.Tools = tools
 		}
 

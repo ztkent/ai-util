@@ -72,6 +72,7 @@ type CompletionRequest struct {
 	Stop           []string               `json:"stop,omitempty"`
 	Stream         bool                   `json:"stream,omitempty"`
 	Tools          []Tool                 `json:"tools,omitempty"`
+	GroundingTools []GroundingTool        `json:"grounding_tools,omitempty"` // Google-specific: URL context, Google Search
 	ToolChoice     interface{}            `json:"tool_choice,omitempty"`
 	ResponseFormat *ResponseFormat        `json:"response_format,omitempty"`
 	Metadata       map[string]interface{} `json:"metadata,omitempty"`
@@ -112,6 +113,17 @@ type Tool struct {
 	Type     string        `json:"type"`
 	Function *ToolFunction `json:"function,omitempty"`
 }
+
+// GroundingTool represents Google-specific grounding tools (URL context, Google Search)
+type GroundingTool struct {
+	Type string `json:"type"` // "url_context" or "google_search"
+}
+
+// GroundingToolURLContext enables URL context retrieval
+const GroundingToolURLContext = "url_context"
+
+// GroundingToolGoogleSearch enables Google Search grounding
+const GroundingToolGoogleSearch = "google_search"
 
 type ToolFunction struct {
 	Name        string                 `json:"name"`
