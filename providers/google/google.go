@@ -400,6 +400,13 @@ func (p *Provider) Complete(ctx context.Context, req *types.CompletionRequest) (
 			}
 		}
 
+		if req.ThinkingConfig != nil {
+			config.ThinkingConfig = &genai.ThinkingConfig{
+				IncludeThoughts: req.ThinkingConfig.IncludeThoughts,
+				ThinkingBudget:  req.ThinkingConfig.ThinkingBudget,
+			}
+		}
+
 		if len(tools) > 0 {
 			config.Tools = tools
 		}
@@ -411,22 +418,7 @@ func (p *Provider) Complete(ctx context.Context, req *types.CompletionRequest) (
 				config.ResponseSchema = convertJSONSchemaToGeminiSchema(req.ResponseFormat.Schema)
 			}
 		}
-
-		// Disable thinking for faster responses by default
-		// thinkingBudget := int32(0)
-		// config.ThinkingConfig = &genai.ThinkingConfig{
-		// 	ThinkingBudget: &thinkingBudget,
-		// }
-	} else {
-		// Default config with thinking disabled
-		// thinkingBudget := int32(0)
-		// config = &genai.GenerateContentConfig{
-		// 	ThinkingConfig: &genai.ThinkingConfig{
-		// 		ThinkingBudget: &thinkingBudget,
-		// 	},
-		// }
 	}
-
 	// Generate content using the correct API
 	result, err := p.client.Models.GenerateContent(
 		ctx,

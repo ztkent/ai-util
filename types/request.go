@@ -74,6 +74,7 @@ type CompletionRequest struct {
 	Tools          []Tool                 `json:"tools,omitempty"`
 	GroundingTools []GroundingTool        `json:"grounding_tools,omitempty"` // Google-specific: URL context, Google Search
 	ToolChoice     interface{}            `json:"tool_choice,omitempty"`
+	ThinkingConfig *ThinkingConfig        `json:"thinking_config,omitempty"`
 	ResponseFormat *ResponseFormat        `json:"response_format,omitempty"`
 	Metadata       map[string]interface{} `json:"metadata,omitempty"`
 }
@@ -117,6 +118,14 @@ type Tool struct {
 // GroundingTool represents Google-specific grounding tools (URL context, Google Search)
 type GroundingTool struct {
 	Type string `json:"type"` // "url_context" or "google_search"
+}
+
+type ThinkingConfig struct {
+	// Optional. Indicates whether to include thoughts in the response. If true, thoughts
+	// are returned only if the model supports thought and thoughts are available.
+	IncludeThoughts bool `json:"includeThoughts,omitempty"`
+	// Optional. Indicates the thinking budget in tokens.
+	ThinkingBudget *int32 `json:"thinkingBudget,omitempty"`
 }
 
 // GroundingToolURLContext enables URL context retrieval
