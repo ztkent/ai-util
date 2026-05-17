@@ -190,12 +190,39 @@ func (p *Provider) GetModels(ctx context.Context) ([]*types.Model, error) {
 				string(types.CapabilityStreaming),
 			},
 		},
-		// Gemma 3 series
+		// Gemma 4 series (current)
+		{
+			ID:          "gemma-4-31b-it",
+			Name:        "Gemma 4 31B IT",
+			Provider:    "google",
+			Description: "Latest high-capacity Gemma 4 instruction-tuned model",
+			MaxTokens:   8192,
+			Capabilities: []string{
+				string(types.CapabilityChat),
+				string(types.CapabilityStreaming),
+				string(types.CapabilityTools),
+				string(types.CapabilityJSON),
+			},
+		},
+		{
+			ID:          "gemma-4-26b-a4b-it",
+			Name:        "Gemma 4 26B A4B IT",
+			Provider:    "google",
+			Description: "Latest efficient Gemma 4 instruction-tuned model",
+			MaxTokens:   8192,
+			Capabilities: []string{
+				string(types.CapabilityChat),
+				string(types.CapabilityStreaming),
+				string(types.CapabilityTools),
+				string(types.CapabilityJSON),
+			},
+		},
+		// Gemma 3 series (deprecated)
 		{
 			ID:          "gemma-3-27b-it",
-			Name:        "Gemma 3 27B IT",
+			Name:        "Gemma 3 27B IT (Deprecated)",
 			Provider:    "google",
-			Description: "Best for complex reasoning and chat",
+			Description: "Deprecated: use Gemma 4 models instead",
 			MaxTokens:   8192,
 			Capabilities: []string{
 				string(types.CapabilityChat),
@@ -206,9 +233,9 @@ func (p *Provider) GetModels(ctx context.Context) ([]*types.Model, error) {
 		},
 		{
 			ID:          "gemma-3-12b-it",
-			Name:        "Gemma 3 12B IT",
+			Name:        "Gemma 3 12B IT (Deprecated)",
 			Provider:    "google",
-			Description: "High performance for laptops/desktops",
+			Description: "Deprecated: use Gemma 4 models instead",
 			MaxTokens:   8192,
 			Capabilities: []string{
 				string(types.CapabilityChat),
@@ -219,9 +246,9 @@ func (p *Provider) GetModels(ctx context.Context) ([]*types.Model, error) {
 		},
 		{
 			ID:          "gemma-3-4b-it",
-			Name:        "Gemma 3 4B IT",
+			Name:        "Gemma 3 4B IT (Deprecated)",
 			Provider:    "google",
-			Description: "Balanced for efficiency and mobile",
+			Description: "Deprecated: use Gemma 4 models instead",
 			MaxTokens:   8192,
 			Capabilities: []string{
 				string(types.CapabilityChat),
@@ -232,9 +259,9 @@ func (p *Provider) GetModels(ctx context.Context) ([]*types.Model, error) {
 		},
 		{
 			ID:          "gemma-3-1b-it",
-			Name:        "Gemma 3 1B IT",
+			Name:        "Gemma 3 1B IT (Deprecated)",
 			Provider:    "google",
-			Description: "Ultra-efficient for text-only tasks",
+			Description: "Deprecated: use Gemma 4 models instead",
 			MaxTokens:   8192,
 			Capabilities: []string{
 				string(types.CapabilityChat),
@@ -675,7 +702,10 @@ func (p *Provider) ValidateModel(model string) error {
 		"gemini-2.5-flash-preview-tts",
 		"gemini-2.5-pro-preview-tts",
 		"gemini-2.5-flash-live",
-		// Gemma 3 series
+		// Gemma 4 series
+		"gemma-4-31b-it",
+		"gemma-4-26b-a4b-it",
+		// Gemma 3 series (deprecated)
 		"gemma-3-27b-it",
 		"gemma-3-12b-it",
 		"gemma-3-4b-it",

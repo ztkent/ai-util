@@ -37,10 +37,9 @@ func TestGemmaModelsIntegration(t *testing.T) {
 		name        string
 		description string
 	}{
-		{"gemma-3-27b-it", "Gemma 3 27B", "Best for complex reasoning and chat"},
-		{"gemma-3-12b-it", "Gemma 3 12B", "High performance for laptops/desktops"},
-		{"gemma-3-4b-it", "Gemma 3 4B", "Balanced for efficiency and mobile"},
-		{"gemma-3-1b-it", "Gemma 3 1B", "Ultra-efficient for text-only tasks"},
+		{"gemma-4-31b-it", "Gemma 4 31B", "Latest high-capacity instruction-tuned model"},
+		{"gemma-4-26b-a4b-it", "Gemma 4 26B A4B", "Latest efficient instruction-tuned model"},
+		{"gemma-3-4b-it", "Gemma 3 4B (Deprecated)", "Deprecated legacy model retained for compatibility"},
 	}
 
 	ctx := context.Background()
