@@ -1,208 +1,124 @@
-<a href="https://github.com/ztkent/ai-util/tags"><img src="https://img.shields.io/github/v/tag/ztkent/ai-util.svg" alt="Latest Release"></a>
+# ai-util
 
-# AI Util
+Chat, stream, and run tool-calling agents.
+No dependencies beyond the standard library.
 
-Tools for building with AI.
-
-## Features
-
-- Supported AI Providers:
-  - [OpenAI](https://platform.openai.com/docs/overview)
-  - [Replicate](https://replicate.com/docs)
-  - [Google AI](https://ai.google.dev/docs)
-- Shared client interface across providers:
-  - `Complete` - Single completion requests
-  - `Stream` - Streaming completion requests
-  - `GetModels` - List available models
-- Conversation Management:
-  - Manage message history and token counts with auto-truncation
-  - Support for system prompts and role-based messaging
-- Tool Calling:
-  - Invoke backend tools and APIs from within conversations
-  - Available only for supported models.
-
-## Installation
+## Install
 
 ```bash
-go get github.com/ztkent/ai-util@latest
+go get github.com/ztkent/ai-util
 ```
 
-## Configuration Options
+Set `OPENROUTER_API_KEY`. Any OpenRouter model works.
 
-**Create a Client:**
-
-```go
-client, err := NewAIClient().
-    WithOpenAI("api-key").                    // Add OpenAI provider
-    WithDefaultProvider("openai").            // Set default provider
-    WithDefaultModel("gpt-4o").               // Set default model
-    WithDefaultTemperature(0.7).              // Set default temperature
-    WithDefaultMaxTokens(4096).               // Set default max tokens
-    Build()
-```
-
-**Request Options:**
-
-- `Temperature(float64)`: Sampling temperature (0.0 to 2.0)
-- `MaxTokens(int)`: Maximum tokens to generate
-- `TopP(float64)`: Nucleus sampling probability
-- `FrequencyPenalty(float64)`: Penalize frequent tokens (OpenAI)
-- `PresencePenalty(float64)`: Penalize present tokens (OpenAI)
-- `Stop([]string)`: Stop sequences
-
-**Conversation Options:**
-
-- `SystemPrompt`: Initial system message
-- `MaxTokens`: Token limit for conversation
-- `AutoTruncate`: Automatically remove old messages when limit reached
-- `PreserveSystem`: Keep system message during truncation
-
-## API Keys
-
-API keys are loaded from environment variables by default:
-
-- **OpenAI:** `OPENAI_API_KEY`
-- **Google AI:** `GOOGLE_API_KEY` and `GOOGLE_PROJECT_ID`
-- **Replicate:** `REPLICATE_API_TOKEN`
-
-Or explicitly provided via the builder pattern.
-
-## Examples
-
-The repository includes examples demonstrating features for each supported provider.
-
-- OpenAI Provider Example (`examples/openai/openai_provider_example.go`)
-- Google AI Provider Example (`examples/google/google_provider_example.go`)
-
-- Features:
-  - Basic chat completions
-  - Streaming responses
-  - Tool/function calling
-  - Token estimation
-  - Model listing
-  - Error handling
-
-## Usage
+## Chat
 
 ```go
-// Basic completion request
-resp, err := client.Complete(ctx, &types.CompletionRequest{
-    Messages: []*types.Message{
-        types.NewTextMessage(types.RoleUser, "What is the capital of France?"),
-    },
-    Model:       "gpt-4o",
-    MaxTokens:   100,
-    Temperature: 0.7,
+client := aiutil.New("")
+
+resp, err := client.Chat(ctx, &aiutil.Request{
+    Model:     "poolside/laguna-s-2.1:free",
+    Messages:  []aiutil.Message{aiutil.User("Explain goroutines in one sentence.")},
+    MaxTokens: 200,
 })
-if err != nil {
-    log.Fatal(err)
-}
-
-fmt.Printf("Response: %s\n", resp.Message.TextData)
-fmt.Printf("Usage: %+v\n", resp.Usage)
+fmt.Println(resp.Message.Content, resp.Usage.TotalTokens)
 ```
 
-```go
-// Multi-message conversation
-resp, err := client.Complete(ctx, &types.CompletionRequest{
-    Messages: []*types.Message{
-        types.NewTextMessage(types.RoleSystem, "You are a helpful assistant."),
-        types.NewTextMessage(types.RoleUser, "Explain quantum computing in simple terms."),
-    },
-    Model:       "gpt-4o",
-    MaxTokens:   500,
-    Temperature: 0.5,
-})
-if err != nil {
-    log.Fatal(err)
-}
-
-fmt.Printf("Assistant: %s\n", resp.Message.TextData)
-```
-
-### Streaming
+## Stream
 
 ```go
-// Stream responses
-err := client.Stream(ctx, &types.CompletionRequest{
-    Messages: []*types.Message{
-        types.NewTextMessage(types.RoleUser, "Tell me a story"),
-    },
-    MaxTokens: 1000,
-}, func(ctx context.Context, response *types.StreamResponse) error {
-    if response.Delta != nil && response.Delta.TextData != "" {
-        fmt.Print(response.Delta.TextData)
+resp, err := client.ChatStream(ctx, req, func(e aiutil.Event) error {
+    if e.Type == aiutil.EventText {
+        fmt.Print(e.Text)
     }
     return nil
 })
-if err != nil {
-    log.Fatal(err)
-}
 ```
 
-### Error Handling
+`ChatStream` returns the same `*Response` as `Chat`, so you get the full message
+and usage after the stream ends.
 
-The API provides structured error handling:
+## Agent
+
+An `Agent` runs the tool loop for you: it calls the model, executes any tools,
+feeds the results back, and repeats until the model answers.
 
 ```go
-resp, err := client.Complete(ctx, req)
-if err != nil {
-    if aiErr, ok := err.(*types.Error); ok {
-        fmt.Printf("Provider: %s, Code: %s, Message: %s\n", 
-            aiErr.Provider, aiErr.Code, aiErr.Message)
-    }
+weather := aiutil.Tool{
+    Name:        "get_weather",
+    Description: "Get the current weather for a city.",
+    Parameters: map[string]any{
+        "type": "object",
+        "properties": map[string]any{
+            "city": map[string]any{"type": "string"},
+        },
+        "required": []string{"city"},
+    },
+    Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
+        var in struct{ City string }
+        json.Unmarshal(args, &in)
+        return in.City + ": 21°C, sunny", nil
+    },
+}
+
+agent := aiutil.NewAgent(client, "poolside/laguna-s-2.1:free",
+    aiutil.WithSystem("Be concise."),
+    aiutil.WithTools(weather),
+)
+
+resp, err := agent.Run(ctx, "What's the weather in Paris?")
+```
+
+`RunStream` is the same but emits `Event`s. The conversation is kept in
+`agent.History()`; call `agent.Reset()` to clear it.
+
+## Request fields
+
+| Field | Notes |
+|---|---|
+| `Model` | Falls back to `WithDefaultModel`. |
+| `Messages` | Required. |
+| `Tools` | Tools the model may call. |
+| `ToolChoice` | `"auto"`, `"none"`, `"required"`, or a specific function. |
+| `Temperature`, `TopP` | `*float64` so `0` is a real value, not "unset". |
+| `MaxTokens` | Output cap. |
+| `Stop` | Stop sequences. |
+| `JSONMode` | Ask for a JSON object. |
+
+## Events
+
+| Type | Meaning |
+|---|---|
+| `EventText` | A chunk of assistant text (`Text`). |
+| `EventToolCall` | A completed tool call (`ToolCall`). |
+| `EventToolResult` | A tool's output (`ToolCall`, `Result`). |
+| `EventDone` | Stream finished (`Response`). |
+
+## Errors
+
+Non-2xx responses and upstream failures return `*APIError`:
+
+```go
+if apiErr, ok := aiutil.IsAPIError(err); ok {
+    fmt.Println(apiErr.StatusCode, apiErr.Message)
 }
 ```
 
-## Available Models
+Transient failures (429, 5xx, network) are retried automatically with
+exponential backoff, honoring `Retry-After`. Tune with `WithRetry`.
 
-### OpenAI Models
+## Options
 
-| Model Name | Model Identifier |
-|------------|------------------|
-| GPT-5 | `gpt-5` |
-| O3 Preview | `o3-preview` |
-| O3 Mini | `o3-mini` |
-| GPT-4o | `gpt-4o` |
-| GPT-4o Mini | `gpt-4o-mini` |
-| GPT-4 Turbo | `gpt-4-turbo` |
-| GPT-4 | `gpt-4` |
-| O1 Preview | `o1-preview` |
-| O1 Mini | `o1-mini` |
+- `WithDefaultModel(model)`
+- `WithBaseURL(url)`
+- `WithHTTPClient(hc)`
+- `WithRetry(policy)`
 
-### Google AI Models
+## Testing
 
-| Model Name | Model Identifier | Capabilities |
-|------------|------------------|--------------|
-| **Gemini 3.0 Series (Next Gen)** | | |
-| Gemini 3 Pro | `gemini-3-pro-preview` | Chat, Streaming, Tools, Vision, Audio, Video, Thinking |
-| Gemini 3 Flash Preview | `gemini-3-flash-preview` | Chat, Streaming, Tools, Vision, Audio, Video, Thinking |
-| **Gemini 2.5 Series (Latest)** | | |
-| Gemini 2.5 Pro | `gemini-2.5-pro` | Chat, Streaming, Tools, Vision, Audio, Video, Thinking |
-| Gemini 2.5 Flash | `gemini-2.5-flash` | Chat, Streaming, Tools, Vision, Audio, Video, Thinking |
-| Gemini 2.5 Flash-Lite | `gemini-2.5-flash-lite` | Chat, Streaming, Tools, Vision, Audio, Video |
-| Gemini 2.5 Flash Preview TTS | `gemini-2.5-flash-preview-tts` | Text-to-Speech |
-| Gemini 2.5 Pro Preview TTS | `gemini-2.5-pro-preview-tts` | Text-to-Speech |
-| **Live Interaction Models** | | |
-| Gemini 2.5 Flash Live | `gemini-2.5-flash-live` | Live Audio/Video, Streaming |
-| Gemini 2.0 Flash Live | `gemini-2.0-flash-live` | Live Audio/Video, Streaming |
-| **Embedding Models** | | |
-| Text Embedding 004 | `text-embedding-004` | Text Embeddings |
-| Gemini Embedding Experimental | `gemini-embedding-exp` | Text Embeddings |
-| **Generation Models** | | |
-| Imagen 4 | `imagen-4.0-generate-preview` | Image Generation |
-| Imagen 3 | `imagen-3.0-generate-002` | Image Generation |
-| Veo 2 | `veo-2.0-generate-001` | Video Generation |
-| Veo 3 | `veo-3.0-generate-001` | Video Generation |
+```bash
+go test ./...                                          # unit tests (mock server)
+OPENROUTER_API_KEY=... go test -tags=integration ./... # live, prefer free models
+```
 
-### Replicate Models
-
-| Model Name | Model Identifier |
-|------------|------------------|
-| Meta Llama 3.1 8B Instruct | `meta/meta-llama-3.1-8b-instruct` |
-| Meta Llama 3.1 70B Instruct | `meta/meta-llama-3.1-70b-instruct` |
-| Meta Llama 3.1 405B Instruct | `meta/meta-llama-3.1-405b-instruct` |
-| Meta Llama 3 8B Instruct | `meta/meta-llama-3-8b-instruct` |
-| Meta Llama 3 70B Instruct | `meta/meta-llama-3-70b-instruct` |
-| Mistral 7B Instruct | `mistralai/mistral-7b-instruct-v0.2` |
-| Mixtral 8x7B Instruct | `mistralai/mixtral-8x7b-instruct-v0.1` |
+Override the integration model with `OPENROUTER_TEST_MODEL`.
