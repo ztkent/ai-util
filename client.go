@@ -1,269 +1,257 @@
 package aiutil
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
-	"sync"
-
-	"github.com/ztkent/ai-util/types"
+	"io"
+	"net/http"
+	"os"
+	"strconv"
+	"time"
 )
 
-// Client is the main interface for interacting with AI providers
+const defaultBaseURL = "https://openrouter.ai/api/v1"
+
+// Request describes a single chat completion.
+type Request struct {
+	Model    string
+	Messages []Message
+	Tools    []Tool
+
+	// ToolChoice controls tool use: "auto", "none", "required", or a specific
+	// function. Nil lets the provider decide.
+	ToolChoice any
+
+	// Pointer fields distinguish "unset" from a meaningful zero value, so
+	// Temperature: ptr(0) is a valid request.
+	Temperature *float64
+	TopP        *float64
+
+	MaxTokens int
+	Stop      []string
+
+	// JSONMode asks the model to return a JSON object.
+	JSONMode bool
+}
+
+// Response is the result of a chat completion.
+type Response struct {
+	ID           string
+	Model        string
+	Message      Message
+	FinishReason string
+	Usage        Usage
+}
+
+// Usage reports token counts for a request.
+type Usage struct {
+	PromptTokens     int
+	CompletionTokens int
+	TotalTokens      int
+}
+
+// Client talks to the OpenRouter API.
 type Client struct {
-	providers     map[string]types.Provider
-	modelRegistry *types.ModelRegistry
-	defaultConfig *ClientConfig
-	mu            sync.RWMutex
+	apiKey       string
+	baseURL      string
+	http         *http.Client
+	retry        RetryPolicy
+	defaultModel string
 }
 
-// ClientConfig holds global client configuration
-type ClientConfig struct {
-	DefaultProvider    string                  `json:"default_provider,omitempty"`
-	DefaultModel       string                  `json:"default_model,omitempty"`
-	DefaultMaxTokens   int                     `json:"default_max_tokens,omitempty"`
-	DefaultTemperature float64                 `json:"default_temperature,omitempty"`
-	ProviderConfigs    map[string]types.Config `json:"provider_configs,omitempty"`
-	Middleware         []Middleware            `json:"-"`
+// Option configures a Client.
+type Option func(*Client)
+
+// New creates a Client. If apiKey is empty, OPENROUTER_API_KEY is used.
+func New(apiKey string, opts ...Option) *Client {
+	if apiKey == "" {
+		apiKey = os.Getenv("OPENROUTER_API_KEY")
+	}
+	c := &Client{
+		apiKey:  apiKey,
+		baseURL: defaultBaseURL,
+		http:    &http.Client{Timeout: 5 * time.Minute},
+		retry:   DefaultRetryPolicy(),
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
 }
 
-// Middleware defines the interface for request/response middleware
-type Middleware interface {
-	ProcessRequest(ctx context.Context, req *types.CompletionRequest) (*types.CompletionRequest, error)
-	ProcessResponse(ctx context.Context, resp *types.CompletionResponse) (*types.CompletionResponse, error)
-}
+// WithBaseURL overrides the API base URL.
+func WithBaseURL(url string) Option { return func(c *Client) { c.baseURL = url } }
 
-// LoggingMiddleware is an example middleware that logs requests and responses
-type LoggingMiddleware struct{}
+// WithHTTPClient sets a custom HTTP client.
+func WithHTTPClient(hc *http.Client) Option { return func(c *Client) { c.http = hc } }
 
-func (m *LoggingMiddleware) ProcessRequest(ctx context.Context, req *types.CompletionRequest) (*types.CompletionRequest, error) {
-	fmt.Printf("Request: Model=%s, Messages=%d\n", req.Model, len(req.Messages))
-	return req, nil
-}
+// WithDefaultModel sets the model used when a Request leaves Model empty.
+func WithDefaultModel(model string) Option { return func(c *Client) { c.defaultModel = model } }
 
-func (m *LoggingMiddleware) ProcessResponse(ctx context.Context, resp *types.CompletionResponse) (*types.CompletionResponse, error) {
-	fmt.Printf("Response: Provider=%s, Tokens=%d\n", resp.Provider, resp.Usage.TotalTokens)
+// WithRetry sets the retry policy.
+func WithRetry(p RetryPolicy) Option { return func(c *Client) { c.retry = p } }
+
+// Chat performs a completion and returns the full response.
+func (c *Client) Chat(ctx context.Context, req *Request) (*Response, error) {
+	wire, err := c.buildRequest(req, false)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp *Response
+	err = c.retry.do(ctx, func() error {
+		var callErr error
+		resp, callErr = c.doChat(ctx, wire)
+		return callErr
+	})
+	if err != nil {
+		return nil, err
+	}
 	return resp, nil
 }
 
-// NewClient creates a new AI client
-func NewClient(config *ClientConfig) *Client {
-	if config == nil {
-		config = &ClientConfig{
-			DefaultMaxTokens:   4096,
-			DefaultTemperature: 0.7,
-			ProviderConfigs:    make(map[string]types.Config),
-		}
-	}
-
-	client := &Client{
-		providers:     make(map[string]types.Provider),
-		modelRegistry: types.NewModelRegistry(),
-		defaultConfig: config,
-	}
-
-	return client
-}
-
-// RegisterProvider registers a new provider with the client
-func (c *Client) RegisterProvider(provider types.Provider) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	providerName := provider.GetName()
-	if _, exists := c.providers[providerName]; exists {
-		return types.NewError(types.ErrCodeInvalidConfig,
-			fmt.Sprintf("provider %s already registered", providerName), "")
-	}
-
-	// Initialize provider if config is available
-	if config, exists := c.defaultConfig.ProviderConfigs[providerName]; exists {
-		if err := provider.Initialize(config); err != nil {
-			return types.WrapError(err, types.ErrCodeInvalidConfig, providerName)
-		}
-	}
-
-	c.providers[providerName] = provider
-
-	// Register models from this provider
-	ctx := context.Background()
-	models, err := provider.GetModels(ctx)
+func (c *Client) doChat(ctx context.Context, wire *wireRequest) (*Response, error) {
+	body, err := json.Marshal(wire)
 	if err != nil {
-		// Log warning but don't fail registration
-		fmt.Printf("Warning: failed to get models for provider %s: %v\n", providerName, err)
-	} else {
-		for _, model := range models {
-			c.modelRegistry.Register(model)
-		}
+		return nil, fmt.Errorf("encode request: %w", err)
 	}
 
-	return nil
-}
-
-// GetProvider returns a provider by name
-func (c *Client) GetProvider(name string) (types.Provider, error) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	provider, exists := c.providers[name]
-	if !exists {
-		return nil, types.NewError(types.ErrCodeInvalidConfig,
-			fmt.Sprintf("provider %s not found", name), "")
-	}
-
-	return provider, nil
-}
-
-// GetModel returns a model by provider and ID
-func (c *Client) GetModel(provider, id string) (*types.Model, error) {
-	model, exists := c.modelRegistry.Get(provider, id)
-	if !exists {
-		return nil, types.NewError(types.ErrCodeModelNotFound,
-			fmt.Sprintf("model %s not found for provider %s", id, provider), provider)
-	}
-	return model, nil
-}
-
-// ListModels returns all available models
-func (c *Client) ListModels() []*types.Model {
-	return c.modelRegistry.List()
-}
-
-// ListModelsByProvider returns models for a specific provider
-func (c *Client) ListModelsByProvider(provider string) []*types.Model {
-	return c.modelRegistry.GetByProvider(provider)
-}
-
-// Complete performs a completion request
-func (c *Client) Complete(ctx context.Context, req *types.CompletionRequest) (*types.CompletionResponse, error) {
-	// Apply defaults
-	if err := c.applyDefaults(req); err != nil {
-		return nil, err
-	}
-
-	// Get provider for the model
-	provider, err := c.getProviderForModel(req.Model)
+	httpResp, err := c.post(ctx, body)
 	if err != nil {
 		return nil, err
 	}
+	defer httpResp.Body.Close()
 
-	// Apply middleware to request
-	processedReq := req
-	for _, middleware := range c.defaultConfig.Middleware {
-		processedReq, err = middleware.ProcessRequest(ctx, processedReq)
-		if err != nil {
-			return nil, types.WrapError(err, types.ErrCodeInvalidRequest, provider.GetName())
-		}
-	}
-
-	// Perform completion
-	resp, err := provider.Complete(ctx, processedReq)
+	raw, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read response: %w", err)
 	}
 
-	// Apply middleware to response
-	for _, middleware := range c.defaultConfig.Middleware {
-		resp, err = middleware.ProcessResponse(ctx, resp)
-		if err != nil {
-			return nil, types.WrapError(err, types.ErrCodeServerError, provider.GetName())
-		}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		return nil, parseAPIError(httpResp, raw)
 	}
 
+	var wr wireResponse
+	if err := json.Unmarshal(raw, &wr); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	if wr.Error != nil {
+		return nil, apiErrorFromWire(wr.Error)
+	}
+	if len(wr.Choices) == 0 {
+		return nil, fmt.Errorf("openrouter: response contained no choices")
+	}
+
+	choice := wr.Choices[0]
+	return &Response{
+		ID:           wr.ID,
+		Model:        wr.Model,
+		Message:      fromWireMessage(choice.Message),
+		FinishReason: choice.FinishReason,
+		Usage:        usageFromWire(wr.Usage),
+	}, nil
+}
+
+// buildRequest converts a Request into the wire format, applying defaults.
+func (c *Client) buildRequest(req *Request, stream bool) (*wireRequest, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request is nil")
+	}
+	model := req.Model
+	if model == "" {
+		model = c.defaultModel
+	}
+	if model == "" {
+		return nil, fmt.Errorf("model is required")
+	}
+	if len(req.Messages) == 0 {
+		return nil, fmt.Errorf("at least one message is required")
+	}
+
+	wire := &wireRequest{
+		Model:       model,
+		Messages:    toWireMessages(req.Messages),
+		Temperature: req.Temperature,
+		TopP:        req.TopP,
+		MaxTokens:   req.MaxTokens,
+		Stop:        req.Stop,
+		Stream:      stream,
+	}
+	if len(req.Tools) > 0 {
+		wire.Tools = toWireTools(req.Tools)
+		wire.ToolChoice = req.ToolChoice
+	}
+	if req.JSONMode {
+		wire.ResponseFormat = &responseFormat{Type: "json_object"}
+	}
+	if stream {
+		wire.StreamOptions = &streamOptions{IncludeUsage: true}
+	}
+	return wire, nil
+}
+
+func (c *Client) post(ctx context.Context, body []byte) (*http.Response, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+	httpReq.Header.Set("HTTP-Referer", "https://github.com/ztkent/ai-util")
+	httpReq.Header.Set("X-Title", "ai-util")
+
+	resp, err := c.http.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("send request: %w", err)
+	}
 	return resp, nil
 }
 
-// Stream performs a streaming completion request
-func (c *Client) Stream(ctx context.Context, req *types.CompletionRequest, callback types.StreamCallback) error {
-	// Apply defaults
-	if err := c.applyDefaults(req); err != nil {
-		return err
+func parseAPIError(resp *http.Response, body []byte) *APIError {
+	apiErr := &APIError{StatusCode: resp.StatusCode, Body: string(body)}
+	var parsed struct {
+		Error *wireError `json:"error"`
 	}
-
-	// Get provider for the model
-	provider, err := c.getProviderForModel(req.Model)
-	if err != nil {
-		return err
-	}
-
-	// Apply middleware to request
-	processedReq := req
-	for _, middleware := range c.defaultConfig.Middleware {
-		processedReq, err = middleware.ProcessRequest(ctx, processedReq)
-		if err != nil {
-			return types.WrapError(err, types.ErrCodeInvalidRequest, provider.GetName())
+	if json.Unmarshal(body, &parsed) == nil && parsed.Error != nil {
+		apiErr.Message = parsed.Error.Message
+		if code, ok := parsed.Error.Code.(string); ok {
+			apiErr.Code = code
 		}
 	}
-
-	// Set stream flag
-	processedReq.Stream = true
-
-	// Perform streaming
-	return provider.Stream(ctx, processedReq, callback)
-}
-
-// EstimateTokens estimates token count for messages and model
-func (c *Client) EstimateTokens(ctx context.Context, messages []*types.Message, model string) (int, error) {
-	provider, err := c.getProviderForModel(model)
-	if err != nil {
-		return 0, err
+	if apiErr.Message == "" {
+		apiErr.Message = http.StatusText(resp.StatusCode)
 	}
-
-	return provider.EstimateTokens(ctx, messages, model)
-}
-
-// Close closes all providers and cleans up resources
-func (c *Client) Close() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	var errors []error
-	for _, provider := range c.providers {
-		if err := provider.Close(); err != nil {
-			errors = append(errors, err)
+	if ra := resp.Header.Get("Retry-After"); ra != "" {
+		if secs, err := strconv.Atoi(ra); err == nil {
+			apiErr.RetryAfter = time.Duration(secs) * time.Second
 		}
 	}
-
-	if len(errors) > 0 {
-		return fmt.Errorf("errors closing providers: %v", errors)
-	}
-
-	return nil
+	return apiErr
 }
 
-// applyDefaults applies default configuration to the request
-func (c *Client) applyDefaults(req *types.CompletionRequest) error {
-	if req.Model == "" {
-		if c.defaultConfig.DefaultModel == "" {
-			return types.NewError(types.ErrCodeInvalidRequest, "model is required", "")
-		}
-		req.Model = c.defaultConfig.DefaultModel
+// apiErrorFromWire builds an APIError from an error embedded in a 200 response
+// body. OpenRouter reports upstream failures this way, often with a numeric
+// code that maps to an HTTP status.
+func apiErrorFromWire(w *wireError) *APIError {
+	apiErr := &APIError{Message: w.Message}
+	switch code := w.Code.(type) {
+	case string:
+		apiErr.Code = code
+	case float64:
+		apiErr.StatusCode = int(code)
 	}
-
-	if req.MaxTokens == 0 {
-		req.MaxTokens = c.defaultConfig.DefaultMaxTokens
-	}
-
-	if req.Temperature == 0 {
-		req.Temperature = c.defaultConfig.DefaultTemperature
-	}
-
-	return nil
+	return apiErr
 }
 
-// getProviderForModel determines which provider should handle the given model
-func (c *Client) getProviderForModel(model string) (types.Provider, error) {
-	// First try to find the model in registry
-	for _, registeredModel := range c.modelRegistry.List() {
-		if registeredModel.ID == model {
-			return c.GetProvider(registeredModel.Provider)
-		}
+func usageFromWire(u *wireUsage) Usage {
+	if u == nil {
+		return Usage{}
 	}
-
-	// Fallback to default provider if configured
-	if c.defaultConfig.DefaultProvider != "" {
-		return c.GetProvider(c.defaultConfig.DefaultProvider)
+	return Usage{
+		PromptTokens:     u.PromptTokens,
+		CompletionTokens: u.CompletionTokens,
+		TotalTokens:      u.TotalTokens,
 	}
-
-	return nil, types.NewError(types.ErrCodeModelNotFound,
-		fmt.Sprintf("no provider found for model %s", model), "")
 }
