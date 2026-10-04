@@ -23,15 +23,26 @@ type streamOptions struct {
 }
 
 type responseFormat struct {
-	Type string `json:"type"`
+	Type       string         `json:"type"`
+	JSONSchema map[string]any `json:"json_schema,omitempty"`
 }
 
 type wireMessage struct {
 	Role       string         `json:"role"`
-	Content    string         `json:"content"`
+	Content    any            `json:"content"`
 	ToolCalls  []wireToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string         `json:"tool_call_id,omitempty"`
 	Name       string         `json:"name,omitempty"`
+}
+
+type wireContentPart struct {
+	Type     string        `json:"type"`
+	Text     string        `json:"text,omitempty"`
+	ImageURL *wireImageURL `json:"image_url,omitempty"`
+}
+
+type wireImageURL struct {
+	URL string `json:"url"`
 }
 
 type wireToolCall struct {
@@ -95,7 +106,7 @@ func toWireMessages(msgs []Message) []wireMessage {
 	for i, m := range msgs {
 		out[i] = wireMessage{
 			Role:       string(m.Role),
-			Content:    m.Content,
+			Content:    wireContent(m),
 			ToolCallID: m.ToolCallID,
 			Name:       m.Name,
 		}
@@ -108,6 +119,24 @@ func toWireMessages(msgs []Message) []wireMessage {
 		}
 	}
 	return out
+}
+
+// wireContent renders a message's content as either a plain string or a list
+// of multimodal parts.
+func wireContent(m Message) any {
+	if len(m.Parts) == 0 {
+		return m.Content
+	}
+	parts := make([]wireContentPart, len(m.Parts))
+	for i, p := range m.Parts {
+		switch p.Type {
+		case "image_url":
+			parts[i] = wireContentPart{Type: "image_url", ImageURL: &wireImageURL{URL: p.ImageURL}}
+		default:
+			parts[i] = wireContentPart{Type: "text", Text: p.Text}
+		}
+	}
+	return parts
 }
 
 func toWireTools(tools []Tool) []wireTool {
@@ -128,9 +157,32 @@ func toWireTools(tools []Tool) []wireTool {
 func fromWireMessage(m wireMessage) Message {
 	msg := Message{
 		Role:       Role(m.Role),
-		Content:    m.Content,
 		ToolCallID: m.ToolCallID,
 		Name:       m.Name,
+	}
+	switch c := m.Content.(type) {
+	case string:
+		msg.Content = c
+	case []any:
+		for _, raw := range c {
+			part, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+			p := ContentPart{}
+			if t, ok := part["type"].(string); ok {
+				p.Type = t
+			}
+			if t, ok := part["text"].(string); ok {
+				p.Text = t
+			}
+			if iu, ok := part["image_url"].(map[string]any); ok {
+				if u, ok := iu["url"].(string); ok {
+					p.ImageURL = u
+				}
+			}
+			msg.Parts = append(msg.Parts, p)
+		}
 	}
 	for _, tc := range m.ToolCalls {
 		msg.ToolCalls = append(msg.ToolCalls, ToolCall{

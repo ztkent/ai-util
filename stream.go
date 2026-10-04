@@ -16,6 +16,7 @@ const (
 	EventText       EventType = "text"        // a chunk of assistant text
 	EventToolCall   EventType = "tool_call"   // a completed tool call
 	EventToolResult EventType = "tool_result" // a tool's output
+	EventUsage      EventType = "usage"       // token usage for the call
 	EventDone       EventType = "done"        // stream finished; Response is set
 )
 
@@ -25,6 +26,7 @@ type Event struct {
 	Text     string    // set for EventText
 	ToolCall ToolCall  // set for EventToolCall
 	Result   string    // set for EventToolResult
+	Usage    Usage     // set for EventUsage
 	Response *Response // set for EventDone
 }
 
@@ -43,7 +45,11 @@ func (c *Client) ChatStream(ctx context.Context, req *Request, onEvent func(Even
 
 	var resp *Response
 	emitted := false
-	err = c.retry.do(ctx, func() error {
+	policy := c.retry
+	if req.Retry != nil {
+		policy = *req.Retry
+	}
+	err = policy.do(ctx, func() error {
 		var callErr error
 		resp, callErr = c.doStream(ctx, body, onEvent, &emitted)
 		if callErr != nil && emitted {
@@ -128,6 +134,11 @@ func readStream(r io.Reader, onEvent func(Event) error, emitted *bool) (*Respons
 		}
 		if chunk.Usage != nil {
 			resp.Usage = usageFromWire(chunk.Usage)
+			if onEvent != nil {
+				if err := onEvent(Event{Type: EventUsage, Usage: resp.Usage}); err != nil {
+					return nil, err
+				}
+			}
 		}
 		if len(chunk.Choices) == 0 {
 			continue
@@ -138,7 +149,7 @@ func readStream(r io.Reader, onEvent func(Event) error, emitted *bool) (*Respons
 			resp.FinishReason = choice.FinishReason
 		}
 
-		if text := choice.Delta.Content; text != "" {
+		if text, ok := choice.Delta.Content.(string); ok && text != "" {
 			content.WriteString(text)
 			*emitted = true
 			if onEvent != nil {

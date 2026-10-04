@@ -3,6 +3,7 @@ package aiutil
 import (
 	"context"
 	"encoding/json"
+	"time"
 )
 
 // Tool is a function the model may call. Parameters is a JSON Schema object
@@ -11,6 +12,9 @@ type Tool struct {
 	Name        string
 	Description string
 	Parameters  any
+
+	// Timeout, when > 0, bounds how long the handler may run.
+	Timeout time.Duration
 
 	// Handler runs the tool. The returned string is fed back to the model.
 	// Returning an error feeds the error text back so the model can recover.

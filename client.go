@@ -34,6 +34,14 @@ type Request struct {
 
 	// JSONMode asks the model to return a JSON object.
 	JSONMode bool
+
+	// ResponseSchema, when set, asks the model to return JSON conforming to the
+	// given JSON Schema (an object with "name", "strict", and "schema" keys).
+	// It implies JSONMode.
+	ResponseSchema map[string]any
+
+	// Retry overrides the client's retry policy for this request.
+	Retry *RetryPolicy
 }
 
 // Response is the result of a chat completion.
@@ -50,6 +58,27 @@ type Usage struct {
 	PromptTokens     int
 	CompletionTokens int
 	TotalTokens      int
+}
+
+// Add returns the sum of two Usage values.
+func (u Usage) Add(other Usage) Usage {
+	return Usage{
+		PromptTokens:     u.PromptTokens + other.PromptTokens,
+		CompletionTokens: u.CompletionTokens + other.CompletionTokens,
+		TotalTokens:      u.TotalTokens + other.TotalTokens,
+	}
+}
+
+// IsZero reports whether all token counts are zero.
+func (u Usage) IsZero() bool {
+	return u.PromptTokens == 0 && u.CompletionTokens == 0 && u.TotalTokens == 0
+}
+
+// ChatClient is the subset of Client used by Agent. Implementations may wrap a
+// *Client to observe or account for calls (for example, a cost ledger).
+type ChatClient interface {
+	Chat(ctx context.Context, req *Request) (*Response, error)
+	ChatStream(ctx context.Context, req *Request, onEvent func(Event) error) (*Response, error)
 }
 
 // Client talks to the OpenRouter API.
@@ -100,8 +129,13 @@ func (c *Client) Chat(ctx context.Context, req *Request) (*Response, error) {
 		return nil, err
 	}
 
+	policy := c.retry
+	if req.Retry != nil {
+		policy = *req.Retry
+	}
+
 	var resp *Response
-	err = c.retry.do(ctx, func() error {
+	err = policy.do(ctx, func() error {
 		var callErr error
 		resp, callErr = c.doChat(ctx, wire)
 		return callErr
@@ -185,6 +219,12 @@ func (c *Client) buildRequest(req *Request, stream bool) (*wireRequest, error) {
 	}
 	if req.JSONMode {
 		wire.ResponseFormat = &responseFormat{Type: "json_object"}
+	}
+	if req.ResponseSchema != nil {
+		wire.ResponseFormat = &responseFormat{
+			Type:       "json_schema",
+			JSONSchema: req.ResponseSchema,
+		}
 	}
 	if stream {
 		wire.StreamOptions = &streamOptions{IncludeUsage: true}
