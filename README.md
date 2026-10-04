@@ -1,16 +1,9 @@
 # ai-util
 
 Chat, stream, and run tool-calling agents.
+
+
 No dependencies beyond the standard library.
-
-## Install
-
-```bash
-go get github.com/ztkent/ai-util
-```
-
-Set `OPENROUTER_API_KEY`. Any OpenRouter model works.
-
 ## Chat
 
 ```go
@@ -35,8 +28,8 @@ resp, err := client.ChatStream(ctx, req, func(e aiutil.Event) error {
 })
 ```
 
-`ChatStream` returns the same `*Response` as `Chat`, so you get the full message
-and usage after the stream ends.
+`ChatStream` returns the same `*Response` as `Chat`, so you still get the full
+message and usage once the stream ends.
 
 ## Agent
 
@@ -69,7 +62,7 @@ agent := aiutil.NewAgent(client, "poolside/laguna-s-2.1:free",
 resp, err := agent.Run(ctx, "What's the weather in Paris?")
 ```
 
-`RunStream` is the same but emits `Event`s. The conversation is kept in
+`RunStream` is the same but emits Events. The conversation lives in
 `agent.History()`; call `agent.Reset()` to clear it.
 
 ### Observing and accounting for calls
@@ -99,21 +92,7 @@ agent := aiutil.NewAgent(client, model,
 )
 ```
 
-`Usage` has `Add` and `IsZero` helpers for aggregating across turns.
-
-### Context and tool-output limits
-
-```go
-aiutil.WithMaxContextTokens(100_000) // trim oldest history before each call
-aiutil.WithMaxToolOutput(8_000)      // truncate large tool results
-```
-
-Per-tool timeouts are set on the `Tool`:
-
-```go
-aiutil.Tool{Name: "shell", Timeout: 30 * time.Second, Handler: run}
-```
-
+###
 ### Structured output
 
 Ask for JSON conforming to a schema, and parse it with retries:
@@ -208,12 +187,14 @@ per request with `Request.Retry`.
 
 ## Options
 
+Client:
+
 - `WithDefaultModel(model)`
 - `WithBaseURL(url)`
 - `WithHTTPClient(hc)`
 - `WithRetry(policy)`
 
-Agent options:
+Agent:
 
 - `WithSystem(prompt)`
 - `WithTools(tools...)`
@@ -224,11 +205,4 @@ Agent options:
 - `WithOnTurn(fn)`
 - `WithHistory(msgs...)`
 
-## Testing
 
-```bash
-go test ./...                                          # unit tests (mock server)
-OPENROUTER_API_KEY=... go test -tags=integration ./... # live, prefer free models
-```
-
-Override the integration model with `OPENROUTER_TEST_MODEL`.
